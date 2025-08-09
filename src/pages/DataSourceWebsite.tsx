@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,72 +10,90 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Search,
-  ListFilter,
-  Calendar as CalendarIcon,
   Download,
   ChevronRight,
+  Plus,
 } from "lucide-react";
-import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
 
-// Dữ liệu mẫu dựa trên ảnh chụp màn hình
-const activityLogs = [
-  {
-    url: "https://google.com",
-    endpoint: "/scrape",
-    pages: 1,
-    dateAdded: "August 9, 2025 at 06:04:09 AM",
-    origin: "API",
-  },
-  {
-    url: "https://batdongsan.com.vn/cho-thue-van-phong-tp-hcm",
-    endpoint: "/map",
-    pages: 27,
-    dateAdded: "August 8, 2025 at 12:22:00 PM",
-    origin: "Playground",
-  },
-  {
-    url: "https://batdongsan.com.vn/cho-thue-van-phong-tp-hcm",
-    endpoint: "/scrape",
-    pages: 1,
-    dateAdded: "August 8, 2025 at 12:18:08 PM",
-    origin: "Playground",
-  },
-  {
-    url: "https://batdongsan.com.vn/cho-thue-van-phong-tp-hcm",
-    endpoint: "/scrape",
-    pages: 1,
-    dateAdded: "August 8, 2025 at 12:17:01 PM",
-    origin: "Playground",
-  },
-];
+interface WebsiteSource {
+  id: string;
+  url: string;
+  endpoint: string | null;
+  pages: number | null;
+  created_at: string;
+  origin: string | null;
+}
 
 const DataSourceWebsite = () => {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(2025, 7, 2), // Tháng 8 là tháng thứ 7 trong Date object
-    to: new Date(2025, 7, 9),
-  });
+  const [websites, setWebsites] = useState<WebsiteSource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const fetchWebsites = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("List_nguon_website")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching websites:", error);
+      showError("Không thể tải danh sách website.");
+    } else {
+      setWebsites(data as WebsiteSource[]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchWebsites();
+  }, []);
+
+  const handleAddWebsite = async () => {
+    if (!newUrl) {
+      showError("Vui lòng nhập URL.");
+      return;
+    }
+    setIsAdding(true);
+    const toastId = showLoading("Đang thêm website...");
+
+    const { error } = await supabase
+      .from("List_nguon_website")
+      .insert([{ url: newUrl, origin: "Manual" }]);
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Thêm thất bại: ${error.message}`);
+    } else {
+      showSuccess("Thêm website thành công!");
+      setIsDialogOpen(false);
+      setNewUrl("");
+      fetchWebsites(); // Refresh the list
+    }
+    setIsAdding(false);
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Nguồn Website</h1>
         <p className="text-gray-500 mt-1">
-          Xem lại hoạt động các yêu cầu của bạn.
+          Quản lý danh sách các url website muốn theo dõi để lấy dữ liệu.
         </p>
       </div>
 
@@ -84,61 +102,46 @@ const DataSourceWebsite = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input placeholder="Tìm kiếm bằng URL" className="pl-10" />
         </div>
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center space-x-2">
-                <ListFilter className="h-4 w-4" />
-                <span>Tất cả Endpoints</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuCheckboxItem checked>
-                Tất cả Endpoints
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>/scrape</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>/crawl</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>/map</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={"outline"}
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Thêm Website</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+            <DialogHeader>
+              <DialogTitle>Thêm nguồn Website mới</DialogTitle>
+              <DialogDescription>
+                Nhập URL của website bạn muốn theo dõi.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="url" className="text-right">
+                  URL
+                </Label>
+                <Input
+                  id="url"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  className="col-span-3"
+                  placeholder="https://example.com"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
+              <Button 
+                onClick={handleAddWebsite} 
+                disabled={isAdding}
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date?.from ? (
-                  date.to ? (
-                    <>
-                      {format(date.from, "dd LLL, yyyy")} -{" "}
-                      {format(date.to, "dd LLL, yyyy")}
-                    </>
-                  ) : (
-                    format(date.from, "dd LLL, yyyy")
-                  )
-                ) : (
-                  <span>Chọn ngày</span>
-                )}
+                {isAdding ? "Đang thêm..." : "Thêm"}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="border rounded-lg bg-white">
@@ -155,25 +158,41 @@ const DataSourceWebsite = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activityLogs.map((log, index) => (
-              <TableRow key={index}>
-                <TableCell className="text-center">
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </TableCell>
-                <TableCell className="font-medium truncate max-w-sm">
-                  {log.url}
-                </TableCell>
-                <TableCell>{log.endpoint}</TableCell>
-                <TableCell>{log.pages}</TableCell>
-                <TableCell>{log.dateAdded}</TableCell>
-                <TableCell>{log.origin}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Download className="h-5 w-5 text-gray-500" />
-                  </Button>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  Đang tải dữ liệu...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : websites.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  Chưa có website nào. Hãy thêm một website mới.
+                </TableCell>
+              </TableRow>
+            ) : (
+              websites.map((website) => (
+                <TableRow key={website.id}>
+                  <TableCell className="text-center">
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  </TableCell>
+                  <TableCell className="font-medium truncate max-w-sm">
+                    {website.url}
+                  </TableCell>
+                  <TableCell>{website.endpoint || "N/A"}</TableCell>
+                  <TableCell>{website.pages}</TableCell>
+                  <TableCell>
+                    {new Date(website.created_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{website.origin}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Download className="h-5 w-5 text-gray-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
