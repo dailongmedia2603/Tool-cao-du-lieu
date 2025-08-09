@@ -47,7 +47,7 @@ const DataSourceWebsite = () => {
   const fetchWebsites = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("List_nguon_website")
+      .from("list_nguon_website")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -73,7 +73,7 @@ const DataSourceWebsite = () => {
     const toastId = showLoading("Đang thêm website...");
 
     const { error } = await supabase
-      .from("List_nguon_website")
+      .from("list_nguon_website")
       .insert([{ url: newUrl, origin: "Manual" }]);
 
     dismissToast(toastId);
