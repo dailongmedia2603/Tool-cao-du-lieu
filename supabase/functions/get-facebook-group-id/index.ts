@@ -12,66 +12,68 @@ serve(async (req) => {
   }
 
   try {
-    const { group_url, firecrawlApiKey } = await req.json()
+    const { group_url, apiUrl, token } = await req.json()
     if (!group_url) {
       return new Response(JSON.stringify({ success: false, error: 'group_url is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
-    if (!firecrawlApiKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Firecrawl API Key is required. Please set it in the API Keys page.' }), {
+    if (!apiUrl || !token) {
+      return new Response(JSON.stringify({ success: false, error: 'Facebook API URL and Token are required. Please set them in the API Keys page.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
 
-    // Use Firecrawl to scrape the page
-    const firecrawlResponse = await fetch("https://api.firecrawl.dev/v0/scrape", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${firecrawlApiKey}`,
-      },
-      body: JSON.stringify({
-        url: group_url,
-        pageOptions: {
-          onlyMainContent: false, // We need the full HTML to find the ID
-        }
-      })
+    // Use the provided proxy to query the Facebook Graph API
+    // The Graph API can resolve a URL to an object ID
+    const baseUrl = apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`;
+    const graphApiUrl = `${baseUrl}?id=${encodeURIComponent(group_url)}&fields=og_object{id}&access_token=${token}`;
+
+    const response = await fetch(graphApiUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
     });
 
-    const firecrawlData = await firecrawlResponse.json();
+    const responseText = await response.text();
+    let responseData;
 
-    if (!firecrawlResponse.ok || !firecrawlData.success) {
-        throw new Error(`Firecrawl failed: ${firecrawlData.error || 'Unknown error'}`);
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      const errorMessage = `The proxy server returned an invalid JSON response (HTTP Status: ${response.status}). The response was: "${responseText.substring(0, 200)}..."`;
+      return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
     }
-
-    const content = firecrawlData.data?.html || firecrawlData.data?.markdown || '';
     
-    if (!content) {
-        throw new Error('Firecrawl did not return any content for the URL.');
-    }
+    // The proxy might wrap the actual FB response.
+    const facebookData = responseData.data || responseData;
 
-    // Use regex to find the group ID. Patterns can change, so we try a few.
-    const regex = /"groupID":"(\d+)"|group_id=(\d+)|"group_id":"(\d+)"/
-    const match = content.match(regex);
-
-    if (match) {
-      const groupId = match[1] || match[2] || match[3];
+    if (facebookData.og_object && facebookData.og_object.id) {
+      const groupId = facebookData.og_object.id;
       return new Response(JSON.stringify({ success: true, groupId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
-    } else {
-      return new Response(JSON.stringify({ success: false, error: 'Could not find Group ID. The group might be private, the URL is incorrect, or Facebook structure has changed.' }), {
+    } else if (facebookData.error) {
+      const errorMessage = facebookData.error.message || 'Facebook API returned an error.';
+      return new Response(JSON.stringify({ success: false, error: `Graph API Error: ${errorMessage}` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+    else {
+      return new Response(JSON.stringify({ success: false, error: 'Could not resolve Group ID from the URL via Graph API. Check if the URL is correct and public.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
 
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: `An unexpected error occurred: ${error.message}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

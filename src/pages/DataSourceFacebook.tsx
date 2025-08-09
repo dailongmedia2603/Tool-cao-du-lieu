@@ -75,30 +75,30 @@ const DataSourceFacebook = () => {
     let toastId = showLoading("Đang chuẩn bị...");
 
     try {
-      // Step 1: Get Firecrawl API Key
+      // Step 1: Get Facebook API credentials
       dismissToast(toastId);
-      toastId = showLoading("Đang lấy Firecrawl API Key...");
-      const { data: apiKeyData, error: apiKeyError } = await supabase
+      toastId = showLoading("Đang lấy thông tin API Facebook...");
+      const { data: apiData, error: apiError } = await supabase
         .from("luu_api_key")
-        .select("firecrawl_api_key")
+        .select("facebook_api_url, facebook_api_token")
         .eq("id", 1)
         .single();
 
-      if (apiKeyError || !apiKeyData?.firecrawl_api_key) {
+      if (apiError || !apiData?.facebook_api_url || !apiData?.facebook_api_token) {
         dismissToast(toastId);
-        showError("Không tìm thấy Firecrawl API Key. Vui lòng thiết lập trong trang API Keys.");
+        showError("Không tìm thấy API Facebook. Vui lòng thiết lập trong trang API Keys.");
         setIsAdding(false);
         return;
       }
-      const firecrawlApiKey = apiKeyData.firecrawl_api_key;
+      const { facebook_api_url: apiUrl, facebook_api_token: token } = apiData;
 
-      // Step 2: Get Group ID from Edge Function using Firecrawl
+      // Step 2: Get Group ID from Edge Function using Graph API via proxy
       dismissToast(toastId);
-      toastId = showLoading("Đang lấy Group ID bằng Firecrawl...");
+      toastId = showLoading("Đang lấy Group ID qua API...");
       const { data: idData, error: idError } = await supabase.functions.invoke(
         "get-facebook-group-id",
         {
-          body: { group_url: newGroupUrl, firecrawlApiKey: firecrawlApiKey },
+          body: { group_url: newGroupUrl, apiUrl, token },
         }
       );
 
