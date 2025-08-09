@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Code } from "lucide-react";
 
 const Index = () => {
@@ -14,23 +13,34 @@ const Index = () => {
         <p className="text-gray-500 mt-1">Tạo và quản lý các chiến dịch của bạn tại đây.</p>
       </div>
 
-      <Tabs defaultValue="single-url" className="w-full">
-        <TabsList>
-          <TabsTrigger value="single-url">Single URL <span className="text-gray-400 ml-2">/scrape</span></TabsTrigger>
-          <TabsTrigger value="crawl">Crawl <span className="text-gray-400 ml-2">/crawl</span></TabsTrigger>
-          <TabsTrigger value="map">Map <span className="text-gray-400 ml-2">/map</span></TabsTrigger>
-          <TabsTrigger value="search">
-            Search <span className="text-gray-400 ml-2">/search</span>
-            <Badge variant="destructive" className="ml-2 bg-brand-orange-light text-brand-orange border border-orange-200">NEW</Badge>
+      <Tabs defaultValue="facebook" className="w-full">
+        <TabsList className="flex w-full rounded-lg border border-orange-200 p-1 bg-white">
+          <TabsTrigger
+            value="facebook"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md"
+          >
+            Facebook
+          </TabsTrigger>
+          <TabsTrigger
+            value="website"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md"
+          >
+            Website
+          </TabsTrigger>
+          <TabsTrigger
+            value="all"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md"
+          >
+            Tất cả
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="single-url">
-          <Card>
+        <TabsContent value="facebook" className="pt-6">
+          <Card className="border-orange-200">
             <CardContent className="p-6 space-y-6">
               <div>
-                <label className="text-sm font-medium mb-2 block">URL</label>
+                <label className="text-sm font-medium mb-2 block">URL Facebook</label>
                 <div className="flex items-center space-x-2">
-                  <Input defaultValue="https://docs.firecrawl.dev" />
+                  <Input placeholder="Nhập URL bài viết hoặc group Facebook" />
                   <Button variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700 space-x-2">
                     <Code className="h-4 w-4" />
                     <span>Get Code</span>
@@ -62,6 +72,40 @@ const Index = () => {
                       <SelectItem value="agent2">Agent 2</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="website" className="pt-6">
+           <Card className="border-orange-200">
+            <CardContent className="p-6 space-y-6">
+              <div>
+                <label className="text-sm font-medium mb-2 block">URL Website</label>
+                <div className="flex items-center space-x-2">
+                  <Input placeholder="Nhập URL Website" />
+                  <Button variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700 space-x-2">
+                    <Code className="h-4 w-4" />
+                    <span>Get Code</span>
+                  </Button>
+                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white">Run</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="all" className="pt-6">
+           <Card className="border-orange-200">
+            <CardContent className="p-6 space-y-6">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Từ khóa</label>
+                <div className="flex items-center space-x-2">
+                  <Input placeholder="Nhập từ khóa bạn muốn theo dõi" />
+                  <Button variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700 space-x-2">
+                    <Code className="h-4 w-4" />
+                    <span>Get Code</span>
+                  </Button>
+                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white">Run</Button>
                 </div>
               </div>
             </CardContent>
