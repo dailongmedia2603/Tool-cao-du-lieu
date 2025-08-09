@@ -19,10 +19,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { dismissToast, showError, showLoading, showSuccess } from "@/utils/toast";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 const Settings = () => {
   const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-pro");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro");
   const [facebookApiUrl, setFacebookApiUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -39,7 +40,7 @@ const Settings = () => {
         console.error("Error fetching settings:", error);
       } else if (data) {
         setGeminiApiKey(data.gemini_api_key || "");
-        setGeminiModel(data.gemini_model || "gemini-pro");
+        setGeminiModel(data.gemini_model || "gemini-2.5-pro");
         setFacebookApiUrl(data.facebook_api_url || "http://api.akng.io.vn/graph/");
       }
     };
@@ -144,9 +145,33 @@ const Settings = () => {
                     <SelectValue placeholder="Select a model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
-                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
-                    <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                    <SelectItem value="gemini-2.5-pro">
+                      <div>
+                        <div className="flex items-center">
+                          <span>Gemini 2.5 Pro</span>
+                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">gemini-2.5-pro</p>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gemini-2.5-flash">
+                      <div>
+                        <div className="flex items-center">
+                          <span>Gemini 2.5 Flash</span>
+                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">gemini-2.5-flash</p>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gemini-2.5-flash-lite">
+                      <div>
+                        <div className="flex items-center">
+                          <span>Gemini 2.5 Flash-Lite</span>
+                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">gemini-2.5-flash-lite</p>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -161,7 +186,7 @@ const Settings = () => {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={isSaving || isTesting}
+                  disabled={isSaving || isSaving}
                   className="bg-brand-orange hover:bg-brand-orange/90 text-white"
                 >
                   {isSaving ? "Saving..." : "Save"}
