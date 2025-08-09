@@ -113,16 +113,16 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="api-ai" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 rounded-lg border border-orange-200 p-1 bg-gray-50">
+        <TabsList className="grid w-full grid-cols-2 rounded-lg border border-orange-200 p-1 bg-transparent">
           <TabsTrigger
             value="api-ai"
-            className="text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
+            className="py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
           >
             API AI
           </TabsTrigger>
           <TabsTrigger
             value="api-facebook"
-            className="text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
+            className="py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
           >
             API Facebook
           </TabsTrigger>
