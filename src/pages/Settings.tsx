@@ -8,16 +8,99 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { dismissToast, showError, showLoading, showSuccess } from "@/utils/toast";
+import { useEffect, useState } from "react";
 
 const Settings = () => {
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [geminiModel, setGeminiModel] = useState("gemini-pro");
+  const [facebookApiUrl, setFacebookApiUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (error) {
+        console.error("Error fetching settings:", error);
+      } else if (data) {
+        setGeminiApiKey(data.gemini_api_key || "");
+        setGeminiModel(data.gemini_model || "gemini-pro");
+        setFacebookApiUrl(data.facebook_api_url || "http://api.akng.io.vn/graph/");
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const toastId = showLoading("Saving settings...");
+
+    const { error } = await supabase
+      .from("settings")
+      .upsert({
+        id: 1,
+        gemini_api_key: geminiApiKey,
+        gemini_model: geminiModel,
+        facebook_api_url: facebookApiUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Error saving settings: ${error.message}`);
+    } else {
+      showSuccess("Settings saved successfully!");
+    }
+    setIsSaving(false);
+  };
+
+  const handleTestConnection = async () => {
+    if (!geminiApiKey) {
+      showError("Please enter a Gemini API Key first.");
+      return;
+    }
+    setIsTesting(true);
+    const toastId = showLoading("Testing connection...");
+
+    const { data, error } = await supabase.functions.invoke("test-gemini", {
+      body: { apiKey: geminiApiKey },
+    });
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Connection test failed: ${error.message}`);
+    } else {
+      if (data.success) {
+        showSuccess(data.message);
+      } else {
+        showError(`Connection test failed: ${data.message}`);
+      }
+    }
+    setIsTesting(false);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-500 mt-1">
-          Manage your API integrations.
-        </p>
+        <p className="text-gray-500 mt-1">Manage your API integrations.</p>
       </div>
 
       <Tabs defaultValue="api-ai" className="w-full">
@@ -50,11 +133,40 @@ const Settings = () => {
                 <Input
                   id="gemini-api-key"
                   placeholder="Enter your Gemini API Key"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
                 />
               </div>
-              <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white">
-                Save
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="gemini-model">Model</Label>
+                <Select value={geminiModel} onValueChange={setGeminiModel}>
+                  <SelectTrigger id="gemini-model">
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
+                    <SelectItem value="gemini-1.5-flash">Gemini 1.5 Flash</SelectItem>
+                    <SelectItem value="gemini-1.5-pro">Gemini 1.5 Pro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleTestConnection}
+                  disabled={isTesting || isSaving}
+                  variant="secondary"
+                  className="bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  {isTesting ? "Testing..." : "Test Connection"}
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || isTesting}
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -72,11 +184,16 @@ const Settings = () => {
                 <Label htmlFor="facebook-api-url">API URL</Label>
                 <Input
                   id="facebook-api-url"
-                  defaultValue="http://api.akng.io.vn/graph/"
+                  value={facebookApiUrl}
+                  onChange={(e) => setFacebookApiUrl(e.target.value)}
                 />
               </div>
-              <Button className="bg-gray-800 hover:bg-gray-700 text-white">
-                Test Connection
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+              >
+                {isSaving ? "Saving..." : "Save"}
               </Button>
             </CardContent>
           </Card>
