@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface Campaign {
   id: string;
@@ -23,6 +25,10 @@ export interface Campaign {
   scan_unit: string;
   status: string;
   created_at: string;
+  scan_start_date: string | null;
+  keywords: string | null;
+  ai_filter_enabled: boolean;
+  ai_prompt: string | null;
 }
 
 const Index = () => {
@@ -39,6 +45,10 @@ const Index = () => {
   const [scanFrequency, setScanFrequency] = useState<number>(1);
   const [scanUnit, setScanUnit] = useState("day");
   const [isCreating, setIsCreating] = useState(false);
+  const [scanStartDate, setScanStartDate] = useState<Date>();
+  const [keywords, setKeywords] = useState("");
+  const [useAiFilter, setUseAiFilter] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   // Website form state
   const [websiteCampaignName, setWebsiteCampaignName] = useState("");
@@ -66,6 +76,10 @@ const Index = () => {
   const [updatedScanFrequency, setUpdatedScanFrequency] = useState(1);
   const [updatedScanUnit, setUpdatedScanUnit] = useState("day");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatedScanStartDate, setUpdatedScanStartDate] = useState<Date | undefined>();
+  const [updatedKeywords, setUpdatedKeywords] = useState("");
+  const [updatedUseAiFilter, setUpdatedUseAiFilter] = useState(false);
+  const [updatedAiPrompt, setUpdatedAiPrompt] = useState("");
 
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -118,6 +132,10 @@ const Index = () => {
     setEndDate(undefined);
     setScanFrequency(1);
     setScanUnit("day");
+    setScanStartDate(undefined);
+    setKeywords("");
+    setUseAiFilter(false);
+    setAiPrompt("");
   };
 
   const resetWebsiteForm = () => {
@@ -139,6 +157,7 @@ const Index = () => {
 
   const handleCreateCampaign = async (type: 'Facebook' | 'Website' | 'Tổng hợp') => {
     let name, sources, localEndDate, localScanFrequency, localScanUnit, setIsCreatingState, resetForm;
+    let payload: any = {};
 
     if (type === 'Facebook') {
       if (!campaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
@@ -150,6 +169,12 @@ const Index = () => {
       localScanUnit = scanUnit;
       setIsCreatingState = setIsCreating;
       resetForm = resetFacebookForm;
+      payload = {
+        scan_start_date: scanStartDate ? scanStartDate.toISOString() : null,
+        keywords: keywords,
+        ai_filter_enabled: useAiFilter,
+        ai_prompt: useAiFilter ? aiPrompt : null,
+      };
     } else if (type === 'Website') {
       if (!websiteCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
       if (selectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một website.");
@@ -174,11 +199,15 @@ const Index = () => {
 
     setIsCreatingState(true);
     const toastId = showLoading("Đang tạo chiến dịch...");
-    const { error } = await supabase.from('campaigns').insert({
+    
+    const finalPayload = {
       name, type, sources,
       end_date: localEndDate ? localEndDate.toISOString() : null,
       scan_frequency: localScanFrequency, scan_unit: localScanUnit,
-    });
+      ...payload
+    };
+
+    const { error } = await supabase.from('campaigns').insert(finalPayload);
     dismissToast(toastId);
     if (error) {
       showError(`Tạo chiến dịch thất bại: ${error.message}`);
@@ -208,6 +237,10 @@ const Index = () => {
     setUpdatedEndDate(campaign.end_date ? new Date(campaign.end_date) : undefined);
     setUpdatedScanFrequency(campaign.scan_frequency);
     setUpdatedScanUnit(campaign.scan_unit);
+    setUpdatedScanStartDate(campaign.scan_start_date ? new Date(campaign.scan_start_date) : undefined);
+    setUpdatedKeywords(campaign.keywords || "");
+    setUpdatedUseAiFilter(campaign.ai_filter_enabled || false);
+    setUpdatedAiPrompt(campaign.ai_prompt || "");
     setIsEditDialogOpen(true);
   };
 
@@ -218,11 +251,27 @@ const Index = () => {
     
     setIsUpdating(true);
     const toastId = showLoading("Đang cập nhật chiến dịch...");
-    const { error } = await supabase.from('campaigns').update({
-      name: updatedCampaignName, sources: updatedSelectedSources,
+    
+    let payload: any = {
+      name: updatedCampaignName, 
+      sources: updatedSelectedSources,
       end_date: updatedEndDate ? updatedEndDate.toISOString() : null,
-      scan_frequency: updatedScanFrequency, scan_unit: updatedScanUnit,
-    }).eq('id', editingCampaign.id);
+      scan_frequency: updatedScanFrequency, 
+      scan_unit: updatedScanUnit,
+    };
+
+    if (editingCampaign.type === 'Facebook') {
+      payload = {
+        ...payload,
+        scan_start_date: updatedScanStartDate ? updatedScanStartDate.toISOString() : null,
+        keywords: updatedKeywords,
+        ai_filter_enabled: updatedUseAiFilter,
+        ai_prompt: updatedUseAiFilter ? updatedAiPrompt : null,
+      };
+    }
+
+    const { error } = await supabase.from('campaigns').update(payload).eq('id', editingCampaign.id);
+    
     dismissToast(toastId);
     setIsUpdating(false);
     if (error) {
@@ -294,12 +343,24 @@ const Index = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2"><Label>Tên chiến dịch</Label><Input placeholder="VD: Quét group đối thủ" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></div>
                 <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value="Facebook" disabled /></div>
-                <div className="space-y-2 col-span-1 md:col-span-2">
+                <div className="space-y-2 col-span-2">
                   <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{selectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedGroups.length}</span>)}</div>
                   <MultiSelectCombobox options={facebookGroups} selected={selectedGroups} onChange={setSelectedGroups} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
                 </div>
-                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div>
+                <div className="space-y-2"><Label>Muốn quét bài từ ngày</Label><DateTimePicker date={scanStartDate} setDate={setScanStartDate} /></div>
+                <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Từ khoá cần lọc</Label>
+                  <Textarea placeholder="Mỗi từ khoá một hàng..." value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Checkbox id="ai-filter" checked={useAiFilter} onCheckedChange={(checked) => setUseAiFilter(checked as boolean)} />
+                    <Label htmlFor="ai-filter">Lọc bằng AI</Label>
+                  </div>
+                  <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={!useAiFilter} />
+                </div>
+                <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                   <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={scanFrequency} onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={scanUnit} onValueChange={setScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
                   <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Facebook')} disabled={isCreating}>{isCreating ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
                 </div>
@@ -377,7 +438,28 @@ const Index = () => {
               </div>
             )}
 
-            <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
+            {editingCampaign?.type === 'Facebook' && (
+              <>
+                <div className="space-y-2"><Label>Muốn quét bài từ ngày</Label><DateTimePicker date={updatedScanStartDate} setDate={setUpdatedScanStartDate} /></div>
+                <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Từ khoá cần lọc</Label>
+                  <Textarea placeholder="Mỗi từ khoá một hàng..." value={updatedKeywords} onChange={(e) => setUpdatedKeywords(e.target.value)} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Checkbox id="edit-ai-filter" checked={updatedUseAiFilter} onCheckedChange={(checked) => setUpdatedUseAiFilter(checked as boolean)} />
+                    <Label htmlFor="edit-ai-filter">Lọc bằng AI</Label>
+                  </div>
+                  <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={updatedAiPrompt} onChange={(e) => setUpdatedAiPrompt(e.target.value)} disabled={!updatedUseAiFilter} />
+                </div>
+              </>
+            )}
+
+            {editingCampaign?.type !== 'Facebook' && (
+              <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
+            )}
+
             <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={updatedScanFrequency} onChange={(e) => setUpdatedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={updatedScanUnit} onValueChange={setUpdatedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateCampaign} disabled={isUpdating} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isUpdating ? "Đang lưu..." : "Lưu thay đổi"}</Button></DialogFooter>
