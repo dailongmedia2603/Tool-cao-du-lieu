@@ -35,10 +35,13 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface FacebookGroup {
   id: string;
@@ -66,6 +69,10 @@ const DataSourceFacebook = () => {
   // State for deleting
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<FacebookGroup | null>(null);
+
+  // State for importing
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -179,6 +186,73 @@ const DataSourceFacebook = () => {
     setIsSubmitting(false);
   };
 
+  const handleDownloadTemplate = () => {
+    const sampleData = [{ group_id: '123456789012345', group_name: 'Tên group mẫu' }];
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    XLSX.writeFile(workbook, "mau_import_group.xlsx");
+  };
+
+  const handleImport = () => {
+    if (!importFile) {
+      showError("Vui lòng chọn một file để import.");
+      return;
+    }
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang xử lý file...");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet) as { group_id: string; group_name: string }[];
+
+        if (json.length === 0) {
+          dismissToast(toastId);
+          showError("File không có dữ liệu.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const newGroups = json.map(row => {
+          if (!row.group_id || !row.group_name) {
+            throw new Error("File phải có 2 cột 'group_id' và 'group_name'.");
+          }
+          return {
+            group_id: String(row.group_id),
+            group_name: String(row.group_name),
+            origin: 'Import'
+          };
+        });
+
+        dismissToast(toastId);
+        const insertToastId = showLoading(`Đang import ${newGroups.length} group...`);
+
+        const { error } = await supabase.from('list_nguon_facebook').insert(newGroups);
+
+        dismissToast(insertToastId);
+        if (error) {
+          showError(`Import thất bại: ${error.message}`);
+        } else {
+          showSuccess(`Import thành công ${newGroups.length} group!`);
+          setIsImportDialogOpen(false);
+          setImportFile(null);
+          fetchGroups();
+        }
+      } catch (error: any) {
+        dismissToast(toastId);
+        showError(`Lỗi xử lý file: ${error.message}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    reader.readAsArrayBuffer(importFile);
+  };
+
   const filteredGroups = groups.filter((group) =>
     group.group_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -202,52 +276,96 @@ const DataSourceFacebook = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Thêm Group</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-            <DialogHeader>
-              <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
-              <DialogDescription>
-                Nhập ID và tên của group Facebook bạn muốn theo dõi.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="new-group-id">Group ID</Label>
-                <Input
-                  id="new-group-id"
-                  value={newGroupId}
-                  onChange={(e) => setNewGroupId(e.target.value)}
-                  placeholder="Nhập ID của group"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="new-group-name">Tên Group</Label>
-                <Input
-                  id="new-group-name"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="Nhập tên của group"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
-              <Button 
-                onClick={handleAddGroup} 
-                disabled={isSubmitting}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-              >
-                {isSubmitting ? "Đang thêm..." : "Thêm"}
+        <div className="flex items-center space-x-2">
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center space-x-2 border-orange-200">
+                <Upload className="h-4 w-4" />
+                <span>Import</span>
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+              <DialogHeader>
+                <DialogTitle>Import Group từ file Excel</DialogTitle>
+                <DialogDescription>
+                  Chọn file .xlsx hoặc .csv để import hàng loạt. File phải có 2 cột: 'group_id' và 'group_name'.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="import-file">Chọn file</Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-orange-light file:text-brand-orange hover:file:bg-orange-200"
+                  />
+                </div>
+                <Button variant="link" onClick={handleDownloadTemplate} className="text-brand-orange justify-start p-0 h-auto">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Tải file mẫu
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Hủy</Button>
+                <Button 
+                  onClick={handleImport} 
+                  disabled={isSubmitting || !importFile}
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                >
+                  {isSubmitting ? "Đang import..." : "Import"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Thêm Group</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+              <DialogHeader>
+                <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
+                <DialogDescription>
+                  Nhập ID và tên của group Facebook bạn muốn theo dõi.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="new-group-id">Group ID</Label>
+                  <Input
+                    id="new-group-id"
+                    value={newGroupId}
+                    onChange={(e) => setNewGroupId(e.target.value)}
+                    placeholder="Nhập ID của group"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="new-group-name">Tên Group</Label>
+                  <Input
+                    id="new-group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Nhập tên của group"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
+                <Button 
+                  onClick={handleAddGroup} 
+                  disabled={isSubmitting}
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                >
+                  {isSubmitting ? "Đang thêm..." : "Thêm"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="border border-orange-200 rounded-lg bg-white">
