@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Check, ChevronsUpDown, X, ListChecks } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -108,14 +108,18 @@ export function MultiSelectCombobox({
             <CommandList>
               <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
               <CommandGroup>
-                <CommandItem onSelect={handleSelectAll} className="cursor-pointer">
+                <CommandItem
+                  onSelect={handleSelectAll}
+                  className="cursor-pointer font-medium text-brand-orange bg-brand-orange-light/30 hover:!bg-brand-orange-light/70"
+                >
+                  <ListChecks className="mr-2 h-4 w-4" />
+                  <span className="flex-1">Chọn tất cả</span>
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "h-4 w-4",
                       allSelected ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  Chọn tất cả
                 </CommandItem>
                 {options.map((option) => (
                   <CommandItem
