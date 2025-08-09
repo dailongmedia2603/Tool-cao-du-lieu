@@ -25,15 +25,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
   Search,
   Download,
   ChevronRight,
   Plus,
+  ListFilter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
+import { format } from "date-fns";
 
 interface WebsiteSource {
   id: string;
@@ -51,6 +60,8 @@ const DataSourceWebsite = () => {
   const [newUrl, setNewUrl] = useState("");
   const [newEndpoint, setNewEndpoint] = useState("scrape");
   const [isAdding, setIsAdding] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [endpointFilter, setEndpointFilter] = useState("all");
 
   const fetchWebsites = async () => {
     setLoading(true);
@@ -97,6 +108,12 @@ const DataSourceWebsite = () => {
     setIsAdding(false);
   };
 
+  const filteredWebsites = websites.filter((website) => {
+    const matchesSearch = website.url.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesEndpoint = endpointFilter === "all" || website.endpoint === endpointFilter;
+    return matchesSearch && matchesEndpoint;
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -107,9 +124,34 @@ const DataSourceWebsite = () => {
       </div>
 
       <div className="flex items-center justify-between space-x-4">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="Tìm kiếm bằng URL" className="pl-10 border-orange-200" />
+        <div className="flex items-center space-x-2">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Tìm kiếm bằng URL"
+              className="pl-10 border-orange-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center space-x-2 border-orange-200">
+                <ListFilter className="h-4 w-4" />
+                <span>
+                  {endpointFilter === 'all' ? 'Tất cả Endpoints' : endpointFilter}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup value={endpointFilter} onValueChange={setEndpointFilter}>
+                <DropdownMenuRadioItem value="all">Tất cả</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="/scrape">/scrape</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="/crawl">/crawl</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="/map">/map</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -183,14 +225,14 @@ const DataSourceWebsite = () => {
                   Đang tải dữ liệu...
                 </TableCell>
               </TableRow>
-            ) : websites.length === 0 ? (
+            ) : filteredWebsites.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
-                  Chưa có website nào. Hãy thêm một website mới.
+                  Không tìm thấy website nào phù hợp.
                 </TableCell>
               </TableRow>
             ) : (
-              websites.map((website) => (
+              filteredWebsites.map((website) => (
                 <TableRow key={website.id}>
                   <TableCell className="text-center">
                     <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -201,7 +243,7 @@ const DataSourceWebsite = () => {
                   <TableCell>{website.endpoint || "N/A"}</TableCell>
                   <TableCell>{website.pages}</TableCell>
                   <TableCell>
-                    {new Date(website.created_at).toLocaleString()}
+                    {format(new Date(website.created_at), 'dd/MM/yy HH:mm')}
                   </TableCell>
                   <TableCell>{website.origin}</TableCell>
                   <TableCell className="text-right">
