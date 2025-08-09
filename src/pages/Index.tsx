@@ -4,18 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
-import { Code, Calendar as CalendarIcon, ListChecks } from "lucide-react";
+import { Code, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import CampaignList from "@/components/CampaignList";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 export interface Campaign {
   id: string;
@@ -250,7 +247,7 @@ const Index = () => {
                   <MultiSelectCombobox options={facebookGroups} selected={selectedGroups} onChange={setSelectedGroups} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
                 </div>
                 <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{endDate ? format(endDate, "PPP") : <span>Chọn ngày</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent></Popover></div>
+                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div>
                   <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={scanFrequency} onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={scanUnit} onValueChange={setScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
                   <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleCreateCampaign} disabled={isCreating}>{isCreating ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
                 </div>
@@ -280,7 +277,7 @@ const Index = () => {
               <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{updatedSelectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{updatedSelectedGroups.length}</span>)}</div>
               <MultiSelectCombobox options={facebookGroups} selected={updatedSelectedGroups} onChange={setUpdatedSelectedGroups} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
             </div>
-            <div className="space-y-2"><Label>Thời gian kết thúc</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !updatedEndDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{updatedEndDate ? format(updatedEndDate, "PPP") : <span>Chọn ngày</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={updatedEndDate} onSelect={setUpdatedEndDate} initialFocus /></PopoverContent></Popover></div>
+            <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
             <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={updatedScanFrequency} onChange={(e) => setUpdatedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={updatedScanUnit} onValueChange={setUpdatedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateCampaign} disabled={isUpdating} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isUpdating ? "Đang lưu..." : "Lưu thay đổi"}</Button></DialogFooter>
