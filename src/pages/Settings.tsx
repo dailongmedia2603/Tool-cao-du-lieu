@@ -17,17 +17,34 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { dismissToast, showError, showLoading, showSuccess } from "@/utils/toast";
+import {
+  dismissToast,
+  showError,
+  showLoading,
+  showSuccess,
+} from "@/utils/toast";
 import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const Settings = () => {
+  // Gemini states
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro");
+  const [isTestingGemini, setIsTestingGemini] = useState(false);
+  const [geminiTestStatus, setGeminiTestStatus] = useState<
+    "success" | "error" | null
+  >(null);
+
+  // Facebook states
   const [facebookApiUrl, setFacebookApiUrl] = useState("");
+  const [facebookApiToken, setFacebookApiToken] = useState("");
+  const [isTestingFacebook, setIsTestingFacebook] = useState(false);
+  const [facebookTestStatus, setFacebookTestStatus] = useState<
+    "success" | "error" | null
+  >(null);
+
+  // General state
   const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState<"success" | "error" | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -42,7 +59,10 @@ const Settings = () => {
       } else if (data) {
         setGeminiApiKey(data.gemini_api_key || "");
         setGeminiModel(data.gemini_model || "gemini-2.5-pro");
-        setFacebookApiUrl(data.facebook_api_url || "http://api.akng.io.vn/graph/");
+        setFacebookApiUrl(
+          data.facebook_api_url || "http://api.akng.io.vn/graph/"
+        );
+        setFacebookApiToken(data.facebook_api_token || "");
       }
     };
 
@@ -60,6 +80,7 @@ const Settings = () => {
         gemini_api_key: geminiApiKey,
         gemini_model: geminiModel,
         facebook_api_url: facebookApiUrl,
+        facebook_api_token: facebookApiToken,
         updated_at: new Date().toISOString(),
       })
       .select();
@@ -73,13 +94,13 @@ const Settings = () => {
     setIsSaving(false);
   };
 
-  const handleTestConnection = async () => {
+  const handleTestGeminiConnection = async () => {
     if (!geminiApiKey) {
       showError("Please enter a Gemini API Key first.");
       return;
     }
-    setIsTesting(true);
-    setTestStatus(null);
+    setIsTestingGemini(true);
+    setGeminiTestStatus(null);
     const toastId = showLoading("Testing connection...");
 
     const { data, error } = await supabase.functions.invoke("test-gemini", {
@@ -89,20 +110,56 @@ const Settings = () => {
     dismissToast(toastId);
     if (error) {
       showError(`Connection test failed: ${error.message}`);
-      setTestStatus("error");
+      setGeminiTestStatus("error");
     } else if (data) {
       if (data.success) {
         showSuccess(data.message);
-        setTestStatus("success");
+        setGeminiTestStatus("success");
       } else {
         showError(`Connection test failed: ${data.message}`);
-        setTestStatus("error");
+        setGeminiTestStatus("error");
       }
     } else {
       showError("Connection test failed: An unknown error occurred.");
-      setTestStatus("error");
+      setGeminiTestStatus("error");
     }
-    setIsTesting(false);
+    setIsTestingGemini(false);
+  };
+
+  const handleTestFacebookConnection = async () => {
+    if (!facebookApiUrl) {
+      showError("Please enter a Facebook API URL first.");
+      return;
+    }
+    if (!facebookApiToken) {
+      showError("Please enter a Facebook API Token first.");
+      return;
+    }
+    setIsTestingFacebook(true);
+    setFacebookTestStatus(null);
+    const toastId = showLoading("Testing Facebook connection...");
+
+    const { data, error } = await supabase.functions.invoke("test-facebook", {
+      body: { apiUrl: facebookApiUrl, token: facebookApiToken },
+    });
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Connection test failed: ${error.message}`);
+      setFacebookTestStatus("error");
+    } else if (data) {
+      if (data.success) {
+        showSuccess(data.message);
+        setFacebookTestStatus("success");
+      } else {
+        showError(`Connection test failed: ${data.message}`);
+        setFacebookTestStatus("error");
+      }
+    } else {
+      showError("Connection test failed: An unknown error occurred.");
+      setFacebookTestStatus("error");
+    }
+    setIsTestingFacebook(false);
   };
 
   return (
@@ -145,7 +202,7 @@ const Settings = () => {
                   value={geminiApiKey}
                   onChange={(e) => {
                     setGeminiApiKey(e.target.value);
-                    setTestStatus(null);
+                    setGeminiTestStatus(null);
                   }}
                 />
               </div>
@@ -171,29 +228,29 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <div className="flex space-x-2">
                   <Button
-                    onClick={handleTestConnection}
-                    disabled={isTesting || isSaving}
+                    onClick={handleTestGeminiConnection}
+                    disabled={isTestingGemini || isSaving}
                     variant="secondary"
                     className="bg-gray-800 text-white hover:bg-gray-700"
                   >
-                    {isTesting ? "Testing..." : "Test Connection"}
+                    {isTestingGemini ? "Testing..." : "Test Connection"}
                   </Button>
                   <Button
                     onClick={handleSave}
-                    disabled={isSaving || isSaving}
+                    disabled={isSaving || isTestingGemini}
                     className="bg-brand-orange hover:bg-brand-orange/90 text-white"
                   >
                     {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </div>
                 <div>
-                  {testStatus === "success" && (
+                  {geminiTestStatus === "success" && (
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <CheckCircle className="w-4 h-4 mr-1.5" />
                       Thành công
                     </div>
                   )}
-                  {testStatus === "error" && (
+                  {geminiTestStatus === "error" && (
                     <div className="flex items-center text-sm font-medium text-red-600">
                       <XCircle className="w-4 h-4 mr-1.5" />
                       Thất bại
@@ -219,16 +276,57 @@ const Settings = () => {
                 <Input
                   id="facebook-api-url"
                   value={facebookApiUrl}
-                  onChange={(e) => setFacebookApiUrl(e.target.value)}
+                  onChange={(e) => {
+                    setFacebookApiUrl(e.target.value);
+                    setFacebookTestStatus(null);
+                  }}
                 />
               </div>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="facebook-api-token">API Token</Label>
+                <Input
+                  id="facebook-api-token"
+                  placeholder="Enter your Facebook API Token"
+                  value={facebookApiToken}
+                  onChange={(e) => {
+                    setFacebookApiToken(e.target.value);
+                    setFacebookTestStatus(null);
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleTestFacebookConnection}
+                    disabled={isTestingFacebook || isSaving}
+                    variant="secondary"
+                    className="bg-gray-800 text-white hover:bg-gray-700"
+                  >
+                    {isTestingFacebook ? "Testing..." : "Test Connection"}
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving || isTestingFacebook}
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                <div>
+                  {facebookTestStatus === "success" && (
+                    <div className="flex items-center text-sm font-medium text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-1.5" />
+                      Thành công
+                    </div>
+                  )}
+                  {facebookTestStatus === "error" && (
+                    <div className="flex items-center text-sm font-medium text-red-600">
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Thất bại
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
