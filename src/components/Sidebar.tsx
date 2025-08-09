@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Flame, Home, Play, SlidersHorizontal, List, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose } from "lucide-react";
+import { Home, Play, SlidersHorizontal, List, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -64,12 +64,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         isCollapsed ? "w-20" : "w-64"
       )}>
         <div className={cn(
-          "flex h-16 flex-shrink-0 items-center border-b border-gray-200 px-6",
-          isCollapsed && "justify-center px-2"
+          "flex h-16 flex-shrink-0 items-center justify-center border-b border-gray-200 px-4"
         )}>
-          <Link to="/" className="flex items-center space-x-2">
-            <Flame className="h-7 w-7 text-brand-orange flex-shrink-0" />
-            {!isCollapsed && <span className="text-xl font-bold">Firecrawl</span>}
+          <Link to="/">
+            <img src="/logolistenpro.png" alt="Listen Pro Logo" className="h-10 object-contain" />
           </Link>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
