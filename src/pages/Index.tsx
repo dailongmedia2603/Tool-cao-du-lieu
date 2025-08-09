@@ -340,29 +340,59 @@ const Index = () => {
         <TabsContent value="facebook" className="pt-6">
           <Card className="border-orange-200">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2"><Label>Tên chiến dịch</Label><Input placeholder="VD: Quét group đối thủ" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value="Facebook" disabled /></div>
-                <div className="space-y-2 col-span-2">
-                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{selectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedGroups.length}</span>)}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="lg:col-span-2 space-y-2">
+                  <Label>Tên chiến dịch</Label>
+                  <Input placeholder="VD: Quét group đối thủ" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Loại chiến dịch</Label>
+                  <Input value="Facebook" disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tần suất quét</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input type="number" min="1" value={scanFrequency} onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))} className="w-20" />
+                    <Select value={scanUnit} onValueChange={setScanUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minute">Phút</SelectItem>
+                        <SelectItem value="hour">Giờ</SelectItem>
+                        <SelectItem value="day">Ngày</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="lg:col-span-4 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Label>Chọn Group</Label>
+                    {selectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedGroups.length}</span>)}
+                  </div>
                   <MultiSelectCombobox options={facebookGroups} selected={selectedGroups} onChange={setSelectedGroups} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
                 </div>
-                <div className="space-y-2"><Label>Muốn quét bài từ ngày</Label><DateTimePicker date={scanStartDate} setDate={setScanStartDate} /></div>
-                <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Từ khoá cần lọc</Label>
-                  <Textarea placeholder="Mỗi từ khoá một hàng..." value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+                <div className="lg:col-span-2 space-y-2">
+                  <Label>Muốn quét bài từ ngày</Label>
+                  <DateTimePicker date={scanStartDate} setDate={setScanStartDate} />
                 </div>
-                <div className="space-y-2 col-span-2">
-                  <div className="flex items-center space-x-2 mb-2">
+                <div className="lg:col-span-2 space-y-2">
+                  <Label>Thời gian kết thúc</Label>
+                  <DateTimePicker date={endDate} setDate={setEndDate} />
+                </div>
+                <div className="lg:col-span-2 space-y-2">
+                  <Label>Từ khoá cần lọc</Label>
+                  <Textarea placeholder="Mỗi từ khoá một hàng..." value={keywords} onChange={(e) => setKeywords(e.target.value)} className="h-24" />
+                </div>
+                <div className="lg:col-span-2 space-y-2">
+                  <div className="flex items-center space-x-2">
                     <Checkbox id="ai-filter" checked={useAiFilter} onCheckedChange={(checked) => setUseAiFilter(checked as boolean)} />
                     <Label htmlFor="ai-filter">Lọc bằng AI</Label>
                   </div>
-                  <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={!useAiFilter} />
+                  <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={!useAiFilter} className="h-24" />
                 </div>
-                <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                  <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={scanFrequency} onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={scanUnit} onValueChange={setScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
-                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Facebook')} disabled={isCreating}>{isCreating ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                <div className="lg:col-span-4 flex justify-end">
+                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Facebook')} disabled={isCreating}>
+                    {isCreating ? "Đang tạo..." : "Tạo chiến dịch"}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -373,17 +403,44 @@ const Index = () => {
         <TabsContent value="website" className="pt-6">
           <Card className="border-orange-200">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2"><Label>Tên chiến dịch</Label><Input placeholder="VD: Quét giá sản phẩm" value={websiteCampaignName} onChange={(e) => setWebsiteCampaignName(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value="Website" disabled /></div>
-                <div className="space-y-2 col-span-1 md:col-span-2">
-                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Website</Label>{selectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedWebsites.length}</span>)}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+                <div className="lg:col-span-2 space-y-2">
+                  <Label>Tên chiến dịch</Label>
+                  <Input placeholder="VD: Quét giá sản phẩm" value={websiteCampaignName} onChange={(e) => setWebsiteCampaignName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Loại chiến dịch</Label>
+                  <Input value="Website" disabled />
+                </div>
+                <div className="lg:col-span-3 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Label>Chọn Website</Label>
+                    {selectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedWebsites.length}</span>)}
+                  </div>
                   <MultiSelectCombobox options={websiteSources} selected={selectedWebsites} onChange={setSelectedWebsites} placeholder="Chọn một hoặc nhiều website" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
                 </div>
-                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={websiteEndDate} setDate={setWebsiteEndDate} /></div>
-                  <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={websiteScanFrequency} onChange={(e) => setWebsiteScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={websiteScanUnit} onValueChange={setWebsiteScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
-                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Website')} disabled={isCreatingWebsite}>{isCreatingWebsite ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                <div className="space-y-2">
+                  <Label>Thời gian kết thúc</Label>
+                  <DateTimePicker date={websiteEndDate} setDate={setWebsiteEndDate} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tần suất quét</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input type="number" min="1" value={websiteScanFrequency} onChange={(e) => setWebsiteScanFrequency(parseInt(e.target.value, 10))} className="w-20" />
+                    <Select value={websiteScanUnit} onValueChange={setWebsiteScanUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minute">Phút</SelectItem>
+                        <SelectItem value="hour">Giờ</SelectItem>
+                        <SelectItem value="day">Ngày</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Website')} disabled={isCreatingWebsite}>
+                    {isCreatingWebsite ? "Đang tạo..." : "Tạo chiến dịch"}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -394,21 +451,51 @@ const Index = () => {
         <TabsContent value="all" className="pt-6">
           <Card className="border-orange-200">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2"><Label>Tên chiến dịch</Label><Input placeholder="VD: Chiến dịch tổng hợp tháng 8" value={combinedCampaignName} onChange={(e) => setCombinedCampaignName(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value="Tổng hợp" disabled /></div>
-                <div className="space-y-2 col-span-1">
-                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{combinedSelectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedGroups.length}</span>)}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label>Tên chiến dịch</Label>
+                  <Input placeholder="VD: Chiến dịch tổng hợp tháng 8" value={combinedCampaignName} onChange={(e) => setCombinedCampaignName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Loại chiến dịch</Label>
+                  <Input value="Tổng hợp" disabled />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Label>Chọn Group</Label>
+                    {combinedSelectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedGroups.length}</span>)}
+                  </div>
                   <MultiSelectCombobox options={facebookGroups} selected={combinedSelectedGroups} onChange={setCombinedSelectedGroups} placeholder="Chọn group (tùy chọn)" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
                 </div>
-                <div className="space-y-2 col-span-1">
-                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Website</Label>{combinedSelectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedWebsites.length}</span>)}</div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Label>Chọn Website</Label>
+                    {combinedSelectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedWebsites.length}</span>)}
+                  </div>
                   <MultiSelectCombobox options={websiteSources} selected={combinedSelectedWebsites} onChange={setCombinedSelectedWebsites} placeholder="Chọn website (tùy chọn)" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
                 </div>
-                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={combinedEndDate} setDate={setCombinedEndDate} /></div>
-                  <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={combinedScanFrequency} onChange={(e) => setCombinedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={combinedScanUnit} onValueChange={setCombinedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
-                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Tổng hợp')} disabled={isCreatingCombined}>{isCreatingCombined ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                <div className="space-y-2">
+                  <Label>Thời gian kết thúc</Label>
+                  <DateTimePicker date={combinedEndDate} setDate={setCombinedEndDate} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tần suất quét</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input type="number" min="1" value={combinedScanFrequency} onChange={(e) => setCombinedScanFrequency(parseInt(e.target.value, 10))} className="w-20" />
+                    <Select value={combinedScanUnit} onValueChange={setCombinedScanUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minute">Phút</SelectItem>
+                        <SelectItem value="hour">Giờ</SelectItem>
+                        <SelectItem value="day">Ngày</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="lg:col-span-2 flex justify-end">
+                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Tổng hợp')} disabled={isCreatingCombined}>
+                    {isCreatingCombined ? "Đang tạo..." : "Tạo chiến dịch"}
+                  </Button>
                 </div>
               </div>
             </CardContent>
