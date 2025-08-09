@@ -1,39 +1,21 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import ApiKeys from "./pages/ApiKeys";
 import Settings from "./pages/Settings";
+import Index from "./pages/Index";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner
-        position="bottom-right"
-        toastOptions={{
-          classNames: {
-            success: "bg-brand-orange-light text-brand-orange border-orange-200",
-            error: "bg-red-100 text-red-600 border-red-200",
-            loading: "bg-brand-orange-light text-brand-orange border-orange-200",
-          },
-        }}
-      />
-      <BrowserRouter>
+function App() {
+  return (
+    <Router>
+      <Layout>
         <Routes>
-          <Route path="/" element={<Layout><Index /></Layout>} />
-          <Route path="/settings" element={<Layout><Settings /></Layout>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/api-keys" element={<ApiKeys />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </Layout>
+    </Router>
+  );
+}
 
 export default App;
