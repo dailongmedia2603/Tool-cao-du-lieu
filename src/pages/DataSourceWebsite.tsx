@@ -50,10 +50,13 @@ import {
   ListFilter,
   Pencil,
   Trash2,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface WebsiteSource {
   id: string;
@@ -85,6 +88,10 @@ const DataSourceWebsite = () => {
   // Delete state
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [websiteToDelete, setWebsiteToDelete] = useState<WebsiteSource | null>(null);
+
+  // Import state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   const fetchWebsites = async () => {
     setLoading(true);
@@ -188,6 +195,77 @@ const DataSourceWebsite = () => {
     setIsSubmitting(false);
   };
 
+  const handleDownloadTemplate = () => {
+    const sampleData = [{ url: 'https://example.com/page1', endpoint: '/scrape' }];
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    XLSX.writeFile(workbook, "mau_import_website.xlsx");
+  };
+
+  const handleImport = () => {
+    if (!importFile) {
+      showError("Vui lòng chọn một file để import.");
+      return;
+    }
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang xử lý file...");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet) as { url: string; endpoint: string }[];
+
+        if (json.length === 0) {
+          dismissToast(toastId);
+          showError("File không có dữ liệu.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const newWebsites = json.map(row => {
+          if (!row.url || !row.endpoint) {
+            throw new Error("File phải có 2 cột 'url' và 'endpoint'.");
+          }
+          const validEndpoints = ['/scrape', '/crawl', '/map'];
+          if (!validEndpoints.includes(row.endpoint)) {
+              throw new Error(`Endpoint không hợp lệ: ${row.endpoint}. Chỉ chấp nhận /scrape, /crawl, /map.`);
+          }
+          return {
+            url: String(row.url),
+            endpoint: String(row.endpoint),
+            origin: 'Import'
+          };
+        });
+
+        dismissToast(toastId);
+        const insertToastId = showLoading(`Đang import ${newWebsites.length} website...`);
+
+        const { error } = await supabase.from('list_nguon_website').insert(newWebsites);
+
+        dismissToast(insertToastId);
+        if (error) {
+          showError(`Import thất bại: ${error.message}`);
+        } else {
+          showSuccess(`Import thành công ${newWebsites.length} website!`);
+          setIsImportDialogOpen(false);
+          setImportFile(null);
+          fetchWebsites();
+        }
+      } catch (error: any) {
+        dismissToast(toastId);
+        showError(`Lỗi xử lý file: ${error.message}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    reader.readAsArrayBuffer(importFile);
+  };
+
   const filteredWebsites = websites.filter((website) => {
     const matchesSearch = website.url.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesEndpoint = endpointFilter === "all" || website.endpoint === `/${endpointFilter}`;
@@ -233,56 +311,110 @@ const DataSourceWebsite = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Thêm Website</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-            <DialogHeader>
-              <DialogTitle>Thêm nguồn Website mới</DialogTitle>
-              <DialogDescription>
-                Nhập URL và chọn Endpoint cho website bạn muốn theo dõi.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL</Label>
-                <Input
-                  id="url"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="endpoint">Endpoint</Label>
-                <Select value={newEndpoint} onValueChange={setNewEndpoint}>
-                  <SelectTrigger id="endpoint">
-                    <SelectValue placeholder="Chọn một endpoint" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scrape">/scrape</SelectItem>
-                    <SelectItem value="crawl">/crawl</SelectItem>
-                    <SelectItem value="map">/map</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
-              <Button 
-                onClick={handleAddWebsite} 
-                disabled={isSubmitting}
-                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-              >
-                {isSubmitting ? "Đang thêm..." : "Thêm"}
+        <div className="flex items-center space-x-2">
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center space-x-2 border-orange-200">
+                <Upload className="h-4 w-4" />
+                <span>Import</span>
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+              <DialogHeader>
+                <DialogTitle>Import Website từ file Excel</DialogTitle>
+                <DialogDescription>
+                  Chọn file .xlsx hoặc .csv để import hàng loạt. File phải có 2 cột: 'url' và 'endpoint'.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Chọn file</Label>
+                  <Label htmlFor="import-file" className="w-full cursor-pointer">
+                    <div className="flex items-center justify-between w-full h-10 px-3 text-sm border rounded-md border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                      <span className="text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                        {importFile ? importFile.name : "No file chosen"}
+                      </span>
+                      <div className="px-3 py-1 ml-4 text-sm font-semibold rounded-md shrink-0 bg-brand-orange-light text-brand-orange hover:bg-orange-200">
+                        Choose File
+                      </div>
+                    </div>
+                  </Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)}
+                  />
+                </div>
+                <Button variant="link" onClick={handleDownloadTemplate} className="text-brand-orange justify-start p-0 h-auto">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Tải file mẫu
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Hủy</Button>
+                <Button 
+                  onClick={handleImport} 
+                  disabled={isSubmitting || !importFile}
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                >
+                  {isSubmitting ? "Đang import..." : "Import"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Thêm Website</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+              <DialogHeader>
+                <DialogTitle>Thêm nguồn Website mới</DialogTitle>
+                <DialogDescription>
+                  Nhập URL và chọn Endpoint cho website bạn muốn theo dõi.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="url">URL</Label>
+                  <Input
+                    id="url"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="endpoint">Endpoint</Label>
+                  <Select value={newEndpoint} onValueChange={setNewEndpoint}>
+                    <SelectTrigger id="endpoint">
+                      <SelectValue placeholder="Chọn một endpoint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scrape">/scrape</SelectItem>
+                      <SelectItem value="crawl">/crawl</SelectItem>
+                      <SelectItem value="map">/map</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
+                <Button 
+                  onClick={handleAddWebsite} 
+                  disabled={isSubmitting}
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                >
+                  {isSubmitting ? "Đang thêm..." : "Thêm"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="border border-orange-200 rounded-lg bg-white">
