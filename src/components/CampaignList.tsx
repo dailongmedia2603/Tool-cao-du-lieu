@@ -26,19 +26,24 @@ export interface Campaign {
   status: string;
   end_date: string | null;
   created_at: string;
+  sources: string[];
+  scan_frequency: number;
+  scan_unit: string;
 }
 
 interface CampaignListProps {
   campaigns: Campaign[];
   loading: boolean;
   onStatusChange: (id: string, newStatus: string) => void;
-  onDelete: (id: string) => void;
+  onEdit: (campaign: Campaign) => void;
+  onDelete: (campaign: Campaign) => void;
 }
 
 const CampaignList = ({
   campaigns,
   loading,
   onStatusChange,
+  onEdit,
   onDelete,
 }: CampaignListProps) => {
   if (loading) {
@@ -115,13 +120,13 @@ const CampaignList = ({
                         <span>Tiếp tục</span>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(campaign)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       <span>Sửa</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={() => onDelete(campaign.id)}
+                      onClick={() => onDelete(campaign)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       <span>Xóa</span>
