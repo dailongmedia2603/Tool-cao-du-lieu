@@ -12,35 +12,52 @@ serve(async (req) => {
   }
 
   try {
-    const { group_url } = await req.json()
+    const { group_url, firecrawlApiKey } = await req.json()
     if (!group_url) {
       return new Response(JSON.stringify({ success: false, error: 'group_url is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
-
-    // Fetch the HTML content of the Facebook group page
-    const response = await fetch(group_url, {
-      headers: {
-        // Mimic a browser user agent to avoid being blocked
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch the page, status: ${response.status}`);
+    if (!firecrawlApiKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Firecrawl API Key is required. Please set it in the API Keys page.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
     }
 
-    const html = await response.text();
+    // Use Firecrawl to scrape the page
+    const firecrawlResponse = await fetch("https://api.firecrawl.dev/v0/scrape", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firecrawlApiKey}`,
+      },
+      body: JSON.stringify({
+        url: group_url,
+        pageOptions: {
+          onlyMainContent: false, // We need the full HTML to find the ID
+        }
+      })
+    });
+
+    const firecrawlData = await firecrawlResponse.json();
+
+    if (!firecrawlResponse.ok || !firecrawlData.success) {
+        throw new Error(`Firecrawl failed: ${firecrawlData.error || 'Unknown error'}`);
+    }
+
+    const content = firecrawlData.data?.html || firecrawlData.data?.markdown || '';
+    
+    if (!content) {
+        throw new Error('Firecrawl did not return any content for the URL.');
+    }
 
     // Use regex to find the group ID. Patterns can change, so we try a few.
     const regex = /"groupID":"(\d+)"|group_id=(\d+)|"group_id":"(\d+)"/
-    const match = html.match(regex);
+    const match = content.match(regex);
 
     if (match) {
-      // The actual ID will be in one of the capturing groups
       const groupId = match[1] || match[2] || match[3];
       return new Response(JSON.stringify({ success: true, groupId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

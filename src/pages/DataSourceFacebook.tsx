@@ -72,14 +72,33 @@ const DataSourceFacebook = () => {
       return;
     }
     setIsAdding(true);
-    let toastId = showLoading("Đang lấy Group ID từ URL...");
+    let toastId = showLoading("Đang chuẩn bị...");
 
     try {
-      // Step 1: Get Group ID from Edge Function
+      // Step 1: Get Firecrawl API Key
+      dismissToast(toastId);
+      toastId = showLoading("Đang lấy Firecrawl API Key...");
+      const { data: apiKeyData, error: apiKeyError } = await supabase
+        .from("luu_api_key")
+        .select("firecrawl_api_key")
+        .eq("id", 1)
+        .single();
+
+      if (apiKeyError || !apiKeyData?.firecrawl_api_key) {
+        dismissToast(toastId);
+        showError("Không tìm thấy Firecrawl API Key. Vui lòng thiết lập trong trang API Keys.");
+        setIsAdding(false);
+        return;
+      }
+      const firecrawlApiKey = apiKeyData.firecrawl_api_key;
+
+      // Step 2: Get Group ID from Edge Function using Firecrawl
+      dismissToast(toastId);
+      toastId = showLoading("Đang lấy Group ID bằng Firecrawl...");
       const { data: idData, error: idError } = await supabase.functions.invoke(
         "get-facebook-group-id",
         {
-          body: { group_url: newGroupUrl },
+          body: { group_url: newGroupUrl, firecrawlApiKey: firecrawlApiKey },
         }
       );
 
@@ -103,7 +122,7 @@ const DataSourceFacebook = () => {
       dismissToast(toastId);
       toastId = showLoading("Đã có ID, đang thêm group...");
 
-      // Step 2: Insert into database
+      // Step 3: Insert into database
       const { error: insertError } = await supabase
         .from("list_nguon_facebook")
         .insert([{ group_url: newGroupUrl, group_id: groupId, origin: "Manual" }]);
