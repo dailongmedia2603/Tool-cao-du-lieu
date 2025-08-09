@@ -33,6 +33,7 @@ interface FacebookGroup {
   id: string;
   group_url: string;
   group_name: string | null;
+  group_id: string | null;
   created_at: string;
   origin: string | null;
 }
@@ -71,22 +72,48 @@ const DataSourceFacebook = () => {
       return;
     }
     setIsAdding(true);
-    const toastId = showLoading("Đang thêm group...");
+    let toastId = showLoading("Đang lấy Group ID từ URL...");
 
-    const { error } = await supabase
-      .from("list_nguon_facebook")
-      .insert([{ group_url: newGroupUrl, origin: "Manual" }]);
+    try {
+      // Step 1: Get Group ID from Edge Function
+      const { data: idData, error: idError } = await supabase.functions.invoke(
+        "get-facebook-group-id",
+        {
+          body: { group_url: newGroupUrl },
+        }
+      );
 
-    dismissToast(toastId);
-    if (error) {
-      showError(`Thêm thất bại: ${error.message}`);
-    } else {
-      showSuccess("Thêm group thành công!");
-      setIsDialogOpen(false);
-      setNewGroupUrl("");
-      fetchGroups(); // Refresh the list
+      if (idError || !idData.groupId) {
+        dismissToast(toastId);
+        showError(idData?.error || idError?.message || "Không thể lấy được Group ID. Vui lòng kiểm tra lại URL hoặc thử lại sau.");
+        setIsAdding(false);
+        return;
+      }
+
+      const groupId = idData.groupId;
+      dismissToast(toastId);
+      toastId = showLoading("Đã có ID, đang thêm group...");
+
+      // Step 2: Insert into database
+      const { error: insertError } = await supabase
+        .from("list_nguon_facebook")
+        .insert([{ group_url: newGroupUrl, group_id: groupId, origin: "Manual" }]);
+
+      dismissToast(toastId);
+      if (insertError) {
+        showError(`Thêm thất bại: ${insertError.message}`);
+      } else {
+        showSuccess("Thêm group thành công!");
+        setIsDialogOpen(false);
+        setNewGroupUrl("");
+        fetchGroups(); // Refresh the list
+      }
+    } catch (e: any) {
+        dismissToast(toastId);
+        showError(`Đã xảy ra lỗi: ${e.message}`);
+    } finally {
+        setIsAdding(false);
     }
-    setIsAdding(false);
   };
 
   const filteredGroups = groups.filter((group) =>
@@ -123,7 +150,7 @@ const DataSourceFacebook = () => {
             <DialogHeader>
               <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
               <DialogDescription>
-                Nhập URL của group Facebook bạn muốn theo dõi.
+                Nhập URL của group Facebook bạn muốn theo dõi. Hệ thống sẽ tự động lấy ID.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -144,7 +171,7 @@ const DataSourceFacebook = () => {
                 disabled={isAdding}
                 className="bg-brand-orange hover:bg-brand-orange/90 text-white"
               >
-                {isAdding ? "Đang thêm..." : "Thêm"}
+                {isAdding ? "Đang xử lý..." : "Thêm"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -158,6 +185,7 @@ const DataSourceFacebook = () => {
               <TableHead className="w-[40px]"></TableHead>
               <TableHead>URL</TableHead>
               <TableHead>Tên Group</TableHead>
+              <TableHead>Group ID</TableHead>
               <TableHead>Ngày thêm</TableHead>
               <TableHead>Nguồn</TableHead>
               <TableHead className="text-right w-[80px]"></TableHead>
@@ -166,13 +194,13 @@ const DataSourceFacebook = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Đang tải dữ liệu...
                 </TableCell>
               </TableRow>
             ) : filteredGroups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Không tìm thấy group nào phù hợp.
                 </TableCell>
               </TableRow>
@@ -186,6 +214,7 @@ const DataSourceFacebook = () => {
                     {group.group_url}
                   </TableCell>
                   <TableCell>{group.group_name || "N/A"}</TableCell>
+                  <TableCell className="font-mono text-gray-600">{group.group_id || "N/A"}</TableCell>
                   <TableCell>
                     {format(new Date(group.created_at), 'dd/MM/yy HH:mm')}
                   </TableCell>
