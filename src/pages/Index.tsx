@@ -383,9 +383,9 @@ const Index = () => {
                   <Textarea placeholder="Mỗi từ khoá một hàng..." value={keywords} onChange={(e) => setKeywords(e.target.value)} className="h-24" />
                 </div>
                 <div className="lg:col-span-2 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="ai-filter" checked={useAiFilter} onCheckedChange={(checked) => setUseAiFilter(checked as boolean)} />
-                    <Label htmlFor="ai-filter">Lọc bằng AI</Label>
+                  <div className="flex items-center justify-between h-[28px]">
+                    <Label>Lọc bằng AI</Label>
+                    <div className="flex items-center space-x-2"><Checkbox id="ai-filter" checked={useAiFilter} onCheckedChange={(checked) => setUseAiFilter(checked as boolean)} /><Label htmlFor="ai-filter" className="text-sm font-normal cursor-pointer">Bật</Label></div>
                   </div>
                   <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} disabled={!useAiFilter} className="h-24" />
                 </div>
@@ -534,9 +534,9 @@ const Index = () => {
                   <Textarea placeholder="Mỗi từ khoá một hàng..." value={updatedKeywords} onChange={(e) => setUpdatedKeywords(e.target.value)} />
                 </div>
                 <div className="space-y-2 col-span-2">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Checkbox id="edit-ai-filter" checked={updatedUseAiFilter} onCheckedChange={(checked) => setUpdatedUseAiFilter(checked as boolean)} />
-                    <Label htmlFor="edit-ai-filter">Lọc bằng AI</Label>
+                  <div className="flex items-center justify-between h-[28px]">
+                    <Label>Lọc bằng AI</Label>
+                    <div className="flex items-center space-x-2"><Checkbox id="edit-ai-filter" checked={updatedUseAiFilter} onCheckedChange={(checked) => setUpdatedUseAiFilter(checked as boolean)} /><Label htmlFor="edit-ai-filter" className="text-sm font-normal cursor-pointer">Bật</Label></div>
                   </div>
                   <Textarea placeholder="Nhập yêu cầu lọc của bạn cho AI..." value={updatedAiPrompt} onChange={(e) => setUpdatedAiPrompt(e.target.value)} disabled={!updatedUseAiFilter} />
                 </div>
