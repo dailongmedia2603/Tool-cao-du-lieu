@@ -10,7 +10,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto" style={{ background: 'radial-gradient(circle at 100% 0, rgba(255, 244, 236, 0.5) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(255, 244, 236, 0.3) 0%, transparent 50%)' }}>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto" style={{ background: 'radial-gradient(circle at 100% 0, rgba(255, 244, 236, 0.5) 0%, transparent 70%), radial-gradient(circle at 100% 100%, rgba(255, 244, 236, 0.3) 0%, transparent 50%)' }}>
           <div className="p-8">
             {children}
           </div>
