@@ -11,6 +11,7 @@ import { Code, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 
 const Index = () => {
   const [campaignName, setCampaignName] = useState("");
@@ -19,6 +20,7 @@ const Index = () => {
   const [scanFrequency, setScanFrequency] = useState<number>(1);
   const [scanUnit, setScanUnit] = useState("day");
   const [facebookGroups, setFacebookGroups] = useState<SelectOption[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -28,6 +30,7 @@ const Index = () => {
 
       if (error) {
         console.error('Error fetching Facebook groups:', error);
+        showError("Không thể tải danh sách group Facebook.");
       } else if (data) {
         const options = data
           .filter(group => group.group_id && group.group_name)
@@ -42,17 +45,47 @@ const Index = () => {
     fetchGroups();
   }, []);
 
-  const handleCreateCampaign = () => {
-    const campaignData = {
-      name: campaignName,
-      type: 'Facebook',
-      groups: selectedGroups,
-      endDate: endDate,
-      scanFrequency: scanFrequency,
-      scanUnit: scanUnit,
-    };
-    console.log('Creating campaign:', campaignData);
-    // Here you would typically send the data to your backend/Supabase
+  const resetForm = () => {
+    setCampaignName("");
+    setSelectedGroups([]);
+    setEndDate(undefined);
+    setScanFrequency(1);
+    setScanUnit("day");
+  };
+
+  const handleCreateCampaign = async () => {
+    if (!campaignName.trim()) {
+      showError("Vui lòng nhập tên chiến dịch.");
+      return;
+    }
+    if (selectedGroups.length === 0) {
+      showError("Vui lòng chọn ít nhất một group.");
+      return;
+    }
+
+    setIsCreating(true);
+    const toastId = showLoading("Đang tạo chiến dịch...");
+
+    const { error } = await supabase
+      .from('campaigns')
+      .insert({
+        name: campaignName,
+        type: 'Facebook',
+        sources: selectedGroups,
+        end_date: endDate ? endDate.toISOString() : null,
+        scan_frequency: scanFrequency,
+        scan_unit: scanUnit,
+      });
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Tạo chiến dịch thất bại: ${error.message}`);
+      console.error("Error creating campaign:", error);
+    } else {
+      showSuccess("Chiến dịch đã được tạo thành công!");
+      resetForm();
+    }
+    setIsCreating(false);
   };
 
   return (
@@ -162,8 +195,9 @@ const Index = () => {
                 <Button 
                   className="bg-brand-orange hover:bg-brand-orange/90 text-white"
                   onClick={handleCreateCampaign}
+                  disabled={isCreating}
                 >
-                  Tạo chiến dịch
+                  {isCreating ? "Đang tạo..." : "Tạo chiến dịch"}
                 </Button>
               </div>
             </CardContent>
