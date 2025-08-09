@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, Play, SlidersHorizontal, List, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose } from "lucide-react";
+import { Home, Target, SlidersHorizontal, List, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -73,7 +73,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
             <NavLink to="/overview" icon={Home} isCollapsed={isCollapsed}>Overview</NavLink>
-            <NavLink to="/" icon={Play} isCollapsed={isCollapsed}>Playground</NavLink>
+            <NavLink to="/" icon={Target} isCollapsed={isCollapsed}>Chiến dịch</NavLink>
             
             {isCollapsed ? (
               <Tooltip>

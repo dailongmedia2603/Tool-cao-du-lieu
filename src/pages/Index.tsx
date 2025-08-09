@@ -10,8 +10,8 @@ const Index = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Playground</h1>
-        <p className="text-gray-500 mt-1">Try out Firecrawl in this visual playground</p>
+        <h1 className="text-3xl font-bold">Chiến dịch</h1>
+        <p className="text-gray-500 mt-1">Tạo và quản lý các chiến dịch của bạn tại đây.</p>
       </div>
 
       <Tabs defaultValue="single-url" className="w-full">
@@ -70,7 +70,7 @@ const Index = () => {
       </Tabs>
 
       <Card className="text-center p-6 bg-gray-50">
-        <p className="text-gray-500">Start exploring with our playground!</p>
+        <p className="text-gray-500">Bắt đầu tạo chiến dịch đầu tiên của bạn!</p>
       </Card>
     </div>
   );
