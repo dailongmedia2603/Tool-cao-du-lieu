@@ -129,7 +129,7 @@ const DataSourceWebsite = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Tìm kiếm bằng URL"
-              className="pl-10 border-orange-200"
+              className="pl-10 border-orange-200 focus-visible:ring-0 focus-visible:ring-offset-0"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
