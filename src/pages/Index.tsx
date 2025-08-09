@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import CampaignList, { Campaign } from "@/components/CampaignList";
 
 const Index = () => {
   const [campaignName, setCampaignName] = useState("");
@@ -21,6 +22,29 @@ const Index = () => {
   const [scanUnit, setScanUnit] = useState("day");
   const [facebookGroups, setFacebookGroups] = useState<SelectOption[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+
+  const fetchCampaigns = async () => {
+    setLoadingCampaigns(true);
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      showError("Không thể tải danh sách chiến dịch.");
+      console.error("Error fetching campaigns:", error);
+    } else {
+      setCampaigns(data as Campaign[]);
+    }
+    setLoadingCampaigns(false);
+  };
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -84,9 +108,45 @@ const Index = () => {
     } else {
       showSuccess("Chiến dịch đã được tạo thành công!");
       resetForm();
+      fetchCampaigns();
     }
     setIsCreating(false);
   };
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    const toastId = showLoading("Đang cập nhật trạng thái...");
+    const { error } = await supabase
+      .from('campaigns')
+      .update({ status: newStatus })
+      .eq('id', id);
+    
+    dismissToast(toastId);
+    if (error) {
+      showError("Cập nhật thất bại.");
+    } else {
+      showSuccess("Cập nhật trạng thái thành công!");
+      fetchCampaigns();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const toastId = showLoading("Đang xóa chiến dịch...");
+    const { error } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('id', id);
+
+    dismissToast(toastId);
+    if (error) {
+      showError("Xóa thất bại.");
+    } else {
+      showSuccess("Xóa chiến dịch thành công!");
+      fetchCampaigns();
+    }
+  };
+
+  const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
+  const websiteCampaigns = campaigns.filter(c => c.type === 'Website');
 
   return (
     <div className="space-y-6">
@@ -202,6 +262,12 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
+          <CampaignList 
+            campaigns={facebookCampaigns} 
+            loading={loadingCampaigns}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
         </TabsContent>
         <TabsContent value="website" className="pt-6">
            <Card className="border-orange-200">
@@ -219,29 +285,22 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
+           <CampaignList 
+            campaigns={websiteCampaigns} 
+            loading={loadingCampaigns}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
         </TabsContent>
         <TabsContent value="all" className="pt-6">
-           <Card className="border-orange-200">
-            <CardContent className="p-6 space-y-6">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Từ khóa</label>
-                <div className="flex items-center space-x-2">
-                  <Input placeholder="Nhập từ khóa bạn muốn theo dõi" />
-                  <Button variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700 space-x-2">
-                    <Code className="h-4 w-4" />
-                    <span>Get Code</span>
-                  </Button>
-                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white">Run</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+           <CampaignList 
+            campaigns={campaigns} 
+            loading={loadingCampaigns}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
         </TabsContent>
       </Tabs>
-
-      <Card className="text-center p-6 bg-gray-50">
-        <p className="text-gray-500">Bắt đầu tạo chiến dịch đầu tiên của bạn!</p>
-      </Card>
     </div>
   );
 };
