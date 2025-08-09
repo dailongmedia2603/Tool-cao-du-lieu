@@ -23,7 +23,27 @@ const NavLink = ({ to, icon: Icon, children }: { to: string; icon: React.Element
   );
 };
 
+const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "block rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100",
+        isActive && "text-brand-orange font-medium"
+      )}
+    >
+      {children}
+    </Link>
+  );
+};
+
 const Sidebar = () => {
+  const location = useLocation();
+  const isDataSourceActive = location.pathname.startsWith('/data-source');
+
   return (
     <aside className="w-64 flex-shrink-0 border-r border-gray-200 bg-sidebar flex flex-col">
       <div className="flex h-16 flex-shrink-0 items-center border-b border-gray-200 px-6">
@@ -36,18 +56,18 @@ const Sidebar = () => {
         <nav className="space-y-1">
           <NavLink to="/overview" icon={Home}>Overview</NavLink>
           <NavLink to="/" icon={Play}>Playground</NavLink>
-          <Accordion type="single" collapsible defaultValue="item-1">
+          <Accordion type="single" collapsible defaultValue={isDataSourceActive ? "item-1" : undefined}>
             <AccordionItem value="item-1" className="border-none">
               <AccordionTrigger className="flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline">
                 <div className="flex items-center space-x-3">
                   <SlidersHorizontal className="h-5 w-5" />
-                  <span>Extract</span>
+                  <span>Thiết lập nguồn</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pl-8 pb-0">
                 <nav className="space-y-1">
-                  <Link to="#" className="block rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100">Overview</Link>
-                  <Link to="#" className="block rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100">Extract Playground</Link>
+                  <SubNavLink to="/data-source/website">Website</SubNavLink>
+                  <SubNavLink to="/data-source/facebook">Group Facebook</SubNavLink>
                 </nav>
               </AccordionContent>
             </AccordionItem>

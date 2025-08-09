@@ -8,6 +8,8 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
 import ApiKeys from "./pages/ApiKeys";
+import DataSourceWebsite from "./pages/DataSourceWebsite";
+import DataSourceFacebook from "./pages/DataSourceFacebook";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/" element={<Layout><Index /></Layout>} />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
           <Route path="/keys" element={<Layout><ApiKeys /></Layout>} />
+          <Route path="/data-source/website" element={<Layout><DataSourceWebsite /></Layout>} />
+          <Route path="/data-source/facebook" element={<Layout><DataSourceFacebook /></Layout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
