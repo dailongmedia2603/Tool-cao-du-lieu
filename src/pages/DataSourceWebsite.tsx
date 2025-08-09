@@ -18,6 +18,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
   Search,
@@ -42,6 +49,7 @@ const DataSourceWebsite = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newUrl, setNewUrl] = useState("");
+  const [newEndpoint, setNewEndpoint] = useState("scrape");
   const [isAdding, setIsAdding] = useState(false);
 
   const fetchWebsites = async () => {
@@ -74,7 +82,7 @@ const DataSourceWebsite = () => {
 
     const { error } = await supabase
       .from("list_nguon_website")
-      .insert([{ url: newUrl, origin: "Manual" }]);
+      .insert([{ url: newUrl, endpoint: `/${newEndpoint}`, origin: "Manual" }]);
 
     dismissToast(toastId);
     if (error) {
@@ -83,6 +91,7 @@ const DataSourceWebsite = () => {
       showSuccess("Thêm website thành công!");
       setIsDialogOpen(false);
       setNewUrl("");
+      setNewEndpoint("scrape");
       fetchWebsites(); // Refresh the list
     }
     setIsAdding(false);
@@ -113,21 +122,31 @@ const DataSourceWebsite = () => {
             <DialogHeader>
               <DialogTitle>Thêm nguồn Website mới</DialogTitle>
               <DialogDescription>
-                Nhập URL của website bạn muốn theo dõi.
+                Nhập URL và chọn Endpoint cho website bạn muốn theo dõi.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="url" className="text-right">
-                  URL
-                </Label>
+              <div className="grid gap-2">
+                <Label htmlFor="url">URL</Label>
                 <Input
                   id="url"
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
-                  className="col-span-3"
                   placeholder="https://example.com"
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endpoint">Endpoint</Label>
+                <Select value={newEndpoint} onValueChange={setNewEndpoint}>
+                  <SelectTrigger id="endpoint">
+                    <SelectValue placeholder="Chọn một endpoint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scrape">/scrape</SelectItem>
+                    <SelectItem value="crawl">/crawl</SelectItem>
+                    <SelectItem value="map">/map</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
