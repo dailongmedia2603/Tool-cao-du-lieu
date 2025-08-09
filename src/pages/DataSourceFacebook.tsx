@@ -83,9 +83,18 @@ const DataSourceFacebook = () => {
         }
       );
 
-      if (idError || !idData.groupId) {
+      // Handle network errors or function invocation errors
+      if (idError) {
         dismissToast(toastId);
-        showError(idData?.error || idError?.message || "Không thể lấy được Group ID. Vui lòng kiểm tra lại URL hoặc thử lại sau.");
+        showError(`Lỗi khi gọi function: ${idError.message}`);
+        setIsAdding(false);
+        return;
+      }
+
+      // Handle application-level errors returned by the function
+      if (!idData.success || !idData.groupId) {
+        dismissToast(toastId);
+        showError(idData.error || "Không thể lấy được Group ID. Vui lòng kiểm tra lại URL hoặc thử lại sau.");
         setIsAdding(false);
         return;
       }

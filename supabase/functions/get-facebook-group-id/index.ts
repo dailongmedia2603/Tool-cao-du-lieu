@@ -14,9 +14,9 @@ serve(async (req) => {
   try {
     const { group_url } = await req.json()
     if (!group_url) {
-      return new Response(JSON.stringify({ error: 'group_url is required' }), {
+      return new Response(JSON.stringify({ success: false, error: 'group_url is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200,
       })
     }
 
@@ -42,21 +42,21 @@ serve(async (req) => {
     if (match) {
       // The actual ID will be in one of the capturing groups
       const groupId = match[1] || match[2] || match[3];
-      return new Response(JSON.stringify({ groupId }), {
+      return new Response(JSON.stringify({ success: true, groupId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     } else {
-      return new Response(JSON.stringify({ error: 'Could not find Group ID. The group might be private, the URL is incorrect, or Facebook structure has changed.' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Could not find Group ID. The group might be private, the URL is incorrect, or Facebook structure has changed.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
+        status: 200,
       })
     }
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200,
     })
   }
 })
