@@ -26,7 +26,6 @@ serve(async (req) => {
         })
     }
 
-    // Ensure the base URL ends with a slash to correctly resolve the 'me' endpoint.
     const baseUrl = apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`;
     const testUrl = `${baseUrl}me?fields=id&access_token=${token}`;
 
@@ -41,7 +40,6 @@ serve(async (req) => {
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
-      // The response was not valid JSON.
       const errorMessage = `The proxy server returned an invalid response (HTTP Status: ${response.status}). The response was: "${responseText.substring(0, 200)}..."`;
       return new Response(JSON.stringify({ success: false, message: errorMessage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -49,20 +47,20 @@ serve(async (req) => {
       });
     }
 
-    if (response.ok && responseData.id) {
+    // Correctly check for the nested success structure from your proxy
+    if (response.ok && responseData.success === true && responseData.data?.id) {
       return new Response(JSON.stringify({ success: true, message: 'Connection successful!' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     } else {
-      const errorMessage = responseData.error?.message || `Connection failed. The proxy returned: ${JSON.stringify(responseData)}`;
+      const errorMessage = responseData.message || `Connection failed. The proxy returned: ${JSON.stringify(responseData)}`;
       return new Response(JSON.stringify({ success: false, message: errorMessage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
   } catch (error) {
-    // This catches network errors, like DNS resolution failure or if the server is unreachable.
     const errorMessage = `A network error occurred: ${error.message}. Please check the API URL and ensure the server is accessible.`;
     return new Response(JSON.stringify({ success: false, message: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
