@@ -55,11 +55,13 @@ const DataSourceFacebook = () => {
   // State for adding
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newGroupId, setNewGroupId] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
   
   // State for editing
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<FacebookGroup | null>(null);
   const [updatedGroupId, setUpdatedGroupId] = useState("");
+  const [updatedGroupName, setUpdatedGroupName] = useState("");
 
   // State for deleting
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -93,12 +95,16 @@ const DataSourceFacebook = () => {
       showError("Vui lòng nhập ID của group.");
       return;
     }
+    if (!newGroupName) {
+      showError("Vui lòng nhập tên của group.");
+      return;
+    }
     setIsSubmitting(true);
     const toastId = showLoading("Đang thêm group...");
 
     const { error } = await supabase
       .from("list_nguon_facebook")
-      .insert([{ group_id: newGroupId, origin: "Manual" }]);
+      .insert([{ group_id: newGroupId, group_name: newGroupName, origin: "Manual" }]);
 
     dismissToast(toastId);
     if (error) {
@@ -107,6 +113,7 @@ const DataSourceFacebook = () => {
       showSuccess("Thêm group thành công!");
       setIsAddDialogOpen(false);
       setNewGroupId("");
+      setNewGroupName("");
       fetchGroups();
     }
     setIsSubmitting(false);
@@ -115,6 +122,7 @@ const DataSourceFacebook = () => {
   const handleEditClick = (group: FacebookGroup) => {
     setEditingGroup(group);
     setUpdatedGroupId(group.group_id || "");
+    setUpdatedGroupName(group.group_name || "");
     setIsEditDialogOpen(true);
   };
 
@@ -128,7 +136,7 @@ const DataSourceFacebook = () => {
 
     const { error } = await supabase
       .from("list_nguon_facebook")
-      .update({ group_id: updatedGroupId })
+      .update({ group_id: updatedGroupId, group_name: updatedGroupName })
       .eq("id", editingGroup.id);
 
     dismissToast(toastId);
@@ -205,7 +213,7 @@ const DataSourceFacebook = () => {
             <DialogHeader>
               <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
               <DialogDescription>
-                Nhập ID của group Facebook bạn muốn theo dõi.
+                Nhập ID và tên của group Facebook bạn muốn theo dõi.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -216,6 +224,15 @@ const DataSourceFacebook = () => {
                   value={newGroupId}
                   onChange={(e) => setNewGroupId(e.target.value)}
                   placeholder="Nhập ID của group"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="new-group-name">Tên Group</Label>
+                <Input
+                  id="new-group-name"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="Nhập tên của group"
                 />
               </div>
             </div>
@@ -289,9 +306,9 @@ const DataSourceFacebook = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Sửa Group ID</DialogTitle>
+            <DialogTitle>Sửa thông tin Group</DialogTitle>
             <DialogDescription>
-              Cập nhật ID cho group Facebook.
+              Cập nhật ID và tên cho group Facebook.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -302,6 +319,15 @@ const DataSourceFacebook = () => {
                 value={updatedGroupId}
                 onChange={(e) => setUpdatedGroupId(e.target.value)}
                 placeholder="Nhập ID của group"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-group-name">Tên Group</Label>
+              <Input
+                id="edit-group-name"
+                value={updatedGroupName}
+                onChange={(e) => setUpdatedGroupName(e.target.value)}
+                placeholder="Nhập tên của group"
               />
             </div>
           </div>
