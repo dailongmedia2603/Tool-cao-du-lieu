@@ -29,6 +29,8 @@ const Index = () => {
   // Common state
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [facebookGroups, setFacebookGroups] = useState<SelectOption[]>([]);
+  const [websiteSources, setWebsiteSources] = useState<SelectOption[]>([]);
 
   // Facebook form state
   const [campaignName, setCampaignName] = useState("");
@@ -37,7 +39,6 @@ const Index = () => {
   const [scanFrequency, setScanFrequency] = useState<number>(1);
   const [scanUnit, setScanUnit] = useState("day");
   const [isCreating, setIsCreating] = useState(false);
-  const [facebookGroups, setFacebookGroups] = useState<SelectOption[]>([]);
 
   // Website form state
   const [websiteCampaignName, setWebsiteCampaignName] = useState("");
@@ -46,7 +47,15 @@ const Index = () => {
   const [websiteScanFrequency, setWebsiteScanFrequency] = useState<number>(1);
   const [websiteScanUnit, setWebsiteScanUnit] = useState("day");
   const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
-  const [websiteSources, setWebsiteSources] = useState<SelectOption[]>([]);
+
+  // Combined form state
+  const [combinedCampaignName, setCombinedCampaignName] = useState("");
+  const [combinedSelectedGroups, setCombinedSelectedGroups] = useState<string[]>([]);
+  const [combinedSelectedWebsites, setCombinedSelectedWebsites] = useState<string[]>([]);
+  const [combinedEndDate, setCombinedEndDate] = useState<Date>();
+  const [combinedScanFrequency, setCombinedScanFrequency] = useState<number>(1);
+  const [combinedScanUnit, setCombinedScanUnit] = useState("day");
+  const [isCreatingCombined, setIsCreatingCombined] = useState(false);
 
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -119,48 +128,66 @@ const Index = () => {
     setWebsiteScanUnit("day");
   };
 
-  const handleCreateFacebookCampaign = async () => {
-    if (!campaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
-    if (selectedGroups.length === 0) return showError("Vui lòng chọn ít nhất một group.");
-    
-    setIsCreating(true);
+  const resetCombinedForm = () => {
+    setCombinedCampaignName("");
+    setCombinedSelectedGroups([]);
+    setCombinedSelectedWebsites([]);
+    setCombinedEndDate(undefined);
+    setCombinedScanFrequency(1);
+    setCombinedScanUnit("day");
+  };
+
+  const handleCreateCampaign = async (type: 'Facebook' | 'Website' | 'Tổng hợp') => {
+    let name, sources, localEndDate, localScanFrequency, localScanUnit, setIsCreatingState, resetForm;
+
+    if (type === 'Facebook') {
+      if (!campaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
+      if (selectedGroups.length === 0) return showError("Vui lòng chọn ít nhất một group.");
+      name = campaignName;
+      sources = selectedGroups;
+      localEndDate = endDate;
+      localScanFrequency = scanFrequency;
+      localScanUnit = scanUnit;
+      setIsCreatingState = setIsCreating;
+      resetForm = resetFacebookForm;
+    } else if (type === 'Website') {
+      if (!websiteCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
+      if (selectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một website.");
+      name = websiteCampaignName;
+      sources = selectedWebsites;
+      localEndDate = websiteEndDate;
+      localScanFrequency = websiteScanFrequency;
+      localScanUnit = websiteScanUnit;
+      setIsCreatingState = setIsCreatingWebsite;
+      resetForm = resetWebsiteForm;
+    } else { // Combined
+      if (!combinedCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
+      if (combinedSelectedGroups.length === 0 && combinedSelectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một nguồn (Group hoặc Website).");
+      name = combinedCampaignName;
+      sources = [...combinedSelectedGroups, ...combinedSelectedWebsites];
+      localEndDate = combinedEndDate;
+      localScanFrequency = combinedScanFrequency;
+      localScanUnit = combinedScanUnit;
+      setIsCreatingState = setIsCreatingCombined;
+      resetForm = resetCombinedForm;
+    }
+
+    setIsCreatingState(true);
     const toastId = showLoading("Đang tạo chiến dịch...");
     const { error } = await supabase.from('campaigns').insert({
-      name: campaignName, type: 'Facebook', sources: selectedGroups,
-      end_date: endDate ? endDate.toISOString() : null,
-      scan_frequency: scanFrequency, scan_unit: scanUnit,
+      name, type, sources,
+      end_date: localEndDate ? localEndDate.toISOString() : null,
+      scan_frequency: localScanFrequency, scan_unit: localScanUnit,
     });
     dismissToast(toastId);
     if (error) {
       showError(`Tạo chiến dịch thất bại: ${error.message}`);
     } else {
       showSuccess("Chiến dịch đã được tạo thành công!");
-      resetFacebookForm();
+      resetForm();
       fetchCampaigns();
     }
-    setIsCreating(false);
-  };
-
-  const handleCreateWebsiteCampaign = async () => {
-    if (!websiteCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
-    if (selectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một website.");
-
-    setIsCreatingWebsite(true);
-    const toastId = showLoading("Đang tạo chiến dịch...");
-    const { error } = await supabase.from('campaigns').insert({
-        name: websiteCampaignName, type: 'Website', sources: selectedWebsites,
-        end_date: websiteEndDate ? websiteEndDate.toISOString() : null,
-        scan_frequency: websiteScanFrequency, scan_unit: websiteScanUnit,
-    });
-    dismissToast(toastId);
-    if (error) {
-        showError(`Tạo chiến dịch thất bại: ${error.message}`);
-    } else {
-        showSuccess("Chiến dịch đã được tạo thành công!");
-        resetWebsiteForm();
-        fetchCampaigns();
-    }
-    setIsCreatingWebsite(false);
+    setIsCreatingState(false);
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -232,6 +259,20 @@ const Index = () => {
 
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
   const websiteCampaigns = campaigns.filter(c => c.type === 'Website');
+  const allCampaigns = campaigns;
+
+  const getSourcesForEdit = (campaign: Campaign | null) => {
+    if (!campaign) return { groups: [], websites: [] };
+    const allGroupIds = facebookGroups.map(g => g.value);
+    const allWebsiteUrls = websiteSources.map(w => w.value);
+    
+    const groups = campaign.sources.filter(s => allGroupIds.includes(s));
+    const websites = campaign.sources.filter(s => allWebsiteUrls.includes(s));
+    
+    return { groups, websites };
+  };
+
+  const editSources = getSourcesForEdit(editingCampaign);
 
   return (
     <div className="space-y-6">
@@ -260,7 +301,7 @@ const Index = () => {
                 <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                   <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div>
                   <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={scanFrequency} onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={scanUnit} onValueChange={setScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
-                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleCreateFacebookCampaign} disabled={isCreating}>{isCreating ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Facebook')} disabled={isCreating}>{isCreating ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
                 </div>
               </div>
             </CardContent>
@@ -281,7 +322,7 @@ const Index = () => {
                 <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                   <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={websiteEndDate} setDate={setWebsiteEndDate} /></div>
                   <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={websiteScanFrequency} onChange={(e) => setWebsiteScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={websiteScanUnit} onValueChange={setWebsiteScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
-                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleCreateWebsiteCampaign} disabled={isCreatingWebsite}>{isCreatingWebsite ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Website')} disabled={isCreatingWebsite}>{isCreatingWebsite ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
                 </div>
               </div>
             </CardContent>
@@ -290,7 +331,28 @@ const Index = () => {
         </TabsContent>
 
         <TabsContent value="all" className="pt-6">
-          <CampaignList campaigns={campaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+          <Card className="border-orange-200">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2"><Label>Tên chiến dịch</Label><Input placeholder="VD: Chiến dịch tổng hợp tháng 8" value={combinedCampaignName} onChange={(e) => setCombinedCampaignName(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value="Tổng hợp" disabled /></div>
+                <div className="space-y-2 col-span-1">
+                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{combinedSelectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedGroups.length}</span>)}</div>
+                  <MultiSelectCombobox options={facebookGroups} selected={combinedSelectedGroups} onChange={setCombinedSelectedGroups} placeholder="Chọn group (tùy chọn)" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
+                </div>
+                <div className="space-y-2 col-span-1">
+                  <div className="flex items-center space-x-2 mb-2"><Label>Chọn Website</Label>{combinedSelectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedWebsites.length}</span>)}</div>
+                  <MultiSelectCombobox options={websiteSources} selected={combinedSelectedWebsites} onChange={setCombinedSelectedWebsites} placeholder="Chọn website (tùy chọn)" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
+                </div>
+                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                  <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={combinedEndDate} setDate={setCombinedEndDate} /></div>
+                  <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={combinedScanFrequency} onChange={(e) => setCombinedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={combinedScanUnit} onValueChange={setCombinedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
+                  <div className="flex justify-end"><Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Tổng hợp')} disabled={isCreatingCombined}>{isCreatingCombined ? "Đang tạo..." : "Tạo chiến dịch"}</Button></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <CampaignList campaigns={allCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
         </TabsContent>
       </Tabs>
 
@@ -300,20 +362,21 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div className="space-y-2"><Label>Tên chiến dịch</Label><Input value={updatedCampaignName} onChange={(e) => setUpdatedCampaignName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value={editingCampaign?.type || ''} disabled /></div>
-            <div className="space-y-2 col-span-2">
-              <div className="flex items-center space-x-2 mb-2">
-                <Label>{editingCampaign?.type === 'Facebook' ? 'Chọn Group' : 'Chọn Website'}</Label>
-                {updatedSelectedSources.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{updatedSelectedSources.length}</span>)}
+            
+            {(editingCampaign?.type === 'Facebook' || editingCampaign?.type === 'Tổng hợp') && (
+              <div className="space-y-2 col-span-2">
+                <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{editSources.groups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{editSources.groups.length}</span>)}</div>
+                <MultiSelectCombobox options={facebookGroups} selected={editSources.groups} onChange={(newGroups) => setUpdatedSelectedSources([...newGroups, ...editSources.websites])} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
               </div>
-              <MultiSelectCombobox 
-                options={editingCampaign?.type === 'Facebook' ? facebookGroups : websiteSources} 
-                selected={updatedSelectedSources} 
-                onChange={setUpdatedSelectedSources} 
-                placeholder={editingCampaign?.type === 'Facebook' ? "Chọn một hoặc nhiều group" : "Chọn một hoặc nhiều website"}
-                searchPlaceholder={editingCampaign?.type === 'Facebook' ? "Tìm kiếm group..." : "Tìm kiếm website..."}
-                emptyPlaceholder={editingCampaign?.type === 'Facebook' ? "Không tìm thấy group." : "Không tìm thấy website."}
-              />
-            </div>
+            )}
+
+            {(editingCampaign?.type === 'Website' || editingCampaign?.type === 'Tổng hợp') && (
+              <div className="space-y-2 col-span-2">
+                <div className="flex items-center space-x-2 mb-2"><Label>Chọn Website</Label>{editSources.websites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{editSources.websites.length}</span>)}</div>
+                <MultiSelectCombobox options={websiteSources} selected={editSources.websites} onChange={(newWebsites) => setUpdatedSelectedSources([...editSources.groups, ...newWebsites])} placeholder="Chọn một hoặc nhiều website" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
+              </div>
+            )}
+
             <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
             <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={updatedScanFrequency} onChange={(e) => setUpdatedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={updatedScanUnit} onValueChange={setUpdatedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
           </div>
