@@ -178,7 +178,7 @@ const Index = () => {
         </TabsList>
         <TabsContent value="facebook" className="pt-6">
           <Card className="border-orange-200">
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tên chiến dịch</label>
@@ -193,7 +193,14 @@ const Index = () => {
                   <Input value="Facebook" disabled />
                 </div>
                 <div className="space-y-2 col-span-1 md:col-span-2">
-                  <label className="text-sm font-medium">Chọn Group</label>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <label className="text-sm font-medium">Chọn Group</label>
+                    {selectedGroups.length > 0 && (
+                      <span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        {selectedGroups.length}
+                      </span>
+                    )}
+                  </div>
                   <MultiSelectCombobox
                     options={facebookGroups}
                     selected={selectedGroups}
@@ -203,62 +210,65 @@ const Index = () => {
                     emptyPlaceholder="Không tìm thấy group."
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Thời gian kết thúc</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : <span>Chọn ngày</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
+                
+                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Thời gian kết thúc</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !endDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, "PPP") : <span>Chọn ngày</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tần suất quét</label>
+                    <div className="flex items-center space-x-2">
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        value={scanFrequency}
+                        onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))}
+                        className="w-24"
                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tần suất quét</label>
-                  <div className="flex items-center space-x-2">
-                    <Input 
-                      type="number" 
-                      min="1" 
-                      value={scanFrequency}
-                      onChange={(e) => setScanFrequency(parseInt(e.target.value, 10))}
-                      className="w-24"
-                    />
-                    <Select value={scanUnit} onValueChange={setScanUnit}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minute">Phút</SelectItem>
-                        <SelectItem value="hour">Giờ</SelectItem>
-                        <SelectItem value="day">Ngày</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <Select value={scanUnit} onValueChange={setScanUnit}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="minute">Phút</SelectItem>
+                          <SelectItem value="hour">Giờ</SelectItem>
+                          <SelectItem value="day">Ngày</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button 
+                      className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                      onClick={handleCreateCampaign}
+                      disabled={isCreating}
+                    >
+                      {isCreating ? "Đang tạo..." : "Tạo chiến dịch"}
+                    </Button>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end pt-4">
-                <Button 
-                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-                  onClick={handleCreateCampaign}
-                  disabled={isCreating}
-                >
-                  {isCreating ? "Đang tạo..." : "Tạo chiến dịch"}
-                </Button>
               </div>
             </CardContent>
           </Card>

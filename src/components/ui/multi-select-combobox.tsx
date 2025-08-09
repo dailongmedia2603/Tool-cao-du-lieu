@@ -61,6 +61,12 @@ export function MultiSelectCombobox({
     .map(value => options.find(option => option.value === value)?.label)
     .filter(Boolean) as string[];
 
+  const allSelected = options.length > 0 && selected.length === options.length;
+
+  const handleSelectAll = () => {
+    onChange(allSelected ? [] : options.map(o => o.value));
+  };
+
   return (
     <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
@@ -75,9 +81,8 @@ export function MultiSelectCombobox({
               {selectedLabels.length > 0 ? (
                 selectedLabels.map((label) => (
                   <Badge
-                    variant="secondary"
                     key={label}
-                    className="mr-1"
+                    className="mr-1 bg-brand-orange-light text-brand-orange border border-orange-200 hover:bg-orange-200"
                     onClick={(e) => {
                       e.stopPropagation();
                       const valueToRemove = options.find(opt => opt.label === label)?.value;
@@ -103,6 +108,15 @@ export function MultiSelectCombobox({
             <CommandList>
               <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
               <CommandGroup>
+                <CommandItem onSelect={handleSelectAll} className="cursor-pointer">
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      allSelected ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  Chọn tất cả
+                </CommandItem>
                 {options.map((option) => (
                   <CommandItem
                     key={option.value}
