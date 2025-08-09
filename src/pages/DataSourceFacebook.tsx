@@ -18,12 +18,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Search,
-  Download,
   ChevronRight,
   Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
@@ -31,7 +42,6 @@ import { format } from "date-fns";
 
 interface FacebookGroup {
   id: string;
-  group_url: string;
   group_name: string | null;
   group_id: string | null;
   created_at: string;
@@ -41,10 +51,21 @@ interface FacebookGroup {
 const DataSourceFacebook = () => {
   const [groups, setGroups] = useState<FacebookGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newGroupUrl, setNewGroupUrl] = useState("");
+  
+  // State for adding
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newGroupId, setNewGroupId] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
+  
+  // State for editing
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<FacebookGroup | null>(null);
+  const [updatedGroupId, setUpdatedGroupId] = useState("");
+
+  // State for deleting
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<FacebookGroup | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchGroups = async () => {
@@ -68,36 +89,90 @@ const DataSourceFacebook = () => {
   }, []);
 
   const handleAddGroup = async () => {
-    if (!newGroupUrl) {
-      showError("Vui lòng nhập URL của group.");
-      return;
-    }
     if (!newGroupId) {
       showError("Vui lòng nhập ID của group.");
       return;
     }
-    setIsAdding(true);
+    setIsSubmitting(true);
     const toastId = showLoading("Đang thêm group...");
 
     const { error } = await supabase
       .from("list_nguon_facebook")
-      .insert([{ group_url: newGroupUrl, group_id: newGroupId, origin: "Manual" }]);
+      .insert([{ group_id: newGroupId, origin: "Manual" }]);
 
     dismissToast(toastId);
     if (error) {
       showError(`Thêm thất bại: ${error.message}`);
     } else {
       showSuccess("Thêm group thành công!");
-      setIsDialogOpen(false);
-      setNewGroupUrl("");
+      setIsAddDialogOpen(false);
       setNewGroupId("");
-      fetchGroups(); // Refresh the list
+      fetchGroups();
     }
-    setIsAdding(false);
+    setIsSubmitting(false);
+  };
+
+  const handleEditClick = (group: FacebookGroup) => {
+    setEditingGroup(group);
+    setUpdatedGroupId(group.group_id || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup || !updatedGroupId) {
+        showError("Thông tin không hợp lệ.");
+        return;
+    }
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang cập nhật group...");
+
+    const { error } = await supabase
+      .from("list_nguon_facebook")
+      .update({ group_id: updatedGroupId })
+      .eq("id", editingGroup.id);
+
+    dismissToast(toastId);
+    if (error) {
+        showError(`Cập nhật thất bại: ${error.message}`);
+    } else {
+        showSuccess("Cập nhật group thành công!");
+        setIsEditDialogOpen(false);
+        setEditingGroup(null);
+        fetchGroups();
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleDeleteClick = (group: FacebookGroup) => {
+    setGroupToDelete(group);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!groupToDelete) return;
+    
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang xóa group...");
+
+    const { error } = await supabase
+      .from("list_nguon_facebook")
+      .delete()
+      .eq("id", groupToDelete.id);
+
+    dismissToast(toastId);
+    if (error) {
+        showError(`Xóa thất bại: ${error.message}`);
+    } else {
+        showSuccess("Xóa group thành công!");
+        fetchGroups();
+    }
+    setIsDeleteAlertOpen(false);
+    setGroupToDelete(null);
+    setIsSubmitting(false);
   };
 
   const filteredGroups = groups.filter((group) =>
-    group.group_url.toLowerCase().includes(searchTerm.toLowerCase())
+    group.group_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -113,13 +188,13 @@ const DataSourceFacebook = () => {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Tìm kiếm bằng URL"
+            placeholder="Tìm kiếm bằng Group ID"
             className="pl-10 border-orange-200 focus-visible:ring-0 focus-visible:ring-offset-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
               <Plus className="h-4 w-4" />
@@ -130,23 +205,14 @@ const DataSourceFacebook = () => {
             <DialogHeader>
               <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
               <DialogDescription>
-                Nhập URL và ID của group Facebook bạn muốn theo dõi.
+                Nhập ID của group Facebook bạn muốn theo dõi.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="url">URL Group</Label>
+                <Label htmlFor="new-group-id">Group ID</Label>
                 <Input
-                  id="url"
-                  value={newGroupUrl}
-                  onChange={(e) => setNewGroupUrl(e.target.value)}
-                  placeholder="https://www.facebook.com/groups/..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="group-id">Group ID</Label>
-                <Input
-                  id="group-id"
+                  id="new-group-id"
                   value={newGroupId}
                   onChange={(e) => setNewGroupId(e.target.value)}
                   placeholder="Nhập ID của group"
@@ -154,13 +220,13 @@ const DataSourceFacebook = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
               <Button 
                 onClick={handleAddGroup} 
-                disabled={isAdding}
+                disabled={isSubmitting}
                 className="bg-brand-orange hover:bg-brand-orange/90 text-white"
               >
-                {isAdding ? "Đang thêm..." : "Thêm"}
+                {isSubmitting ? "Đang thêm..." : "Thêm"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -172,24 +238,23 @@ const DataSourceFacebook = () => {
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
               <TableHead className="w-[40px]"></TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Tên Group</TableHead>
               <TableHead>Group ID</TableHead>
+              <TableHead>Tên Group</TableHead>
               <TableHead>Ngày thêm</TableHead>
               <TableHead>Nguồn</TableHead>
-              <TableHead className="text-right w-[80px]"></TableHead>
+              <TableHead className="text-right w-[120px]">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Đang tải dữ liệu...
                 </TableCell>
               </TableRow>
             ) : filteredGroups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Không tìm thấy group nào phù hợp.
                 </TableCell>
               </TableRow>
@@ -199,18 +264,18 @@ const DataSourceFacebook = () => {
                   <TableCell className="text-center">
                     <ChevronRight className="h-4 w-4 text-gray-400" />
                   </TableCell>
-                  <TableCell className="font-medium truncate max-w-sm">
-                    {group.group_url}
-                  </TableCell>
-                  <TableCell>{group.group_name || "N/A"}</TableCell>
                   <TableCell className="font-mono text-gray-600">{group.group_id || "N/A"}</TableCell>
+                  <TableCell>{group.group_name || "N/A"}</TableCell>
                   <TableCell>
                     {format(new Date(group.created_at), 'dd/MM/yy HH:mm')}
                   </TableCell>
                   <TableCell>{group.origin}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Download className="h-5 w-5 text-gray-500" />
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(group)}>
+                      <Pencil className="h-4 w-4 text-blue-500" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(group)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -219,6 +284,53 @@ const DataSourceFacebook = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Sửa Group ID</DialogTitle>
+            <DialogDescription>
+              Cập nhật ID cho group Facebook.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-group-id">Group ID</Label>
+              <Input
+                id="edit-group-id"
+                value={updatedGroupId}
+                onChange={(e) => setUpdatedGroupId(e.target.value)}
+                placeholder="Nhập ID của group"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleUpdateGroup} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Thao tác này sẽ xóa vĩnh viễn group khỏi danh sách của bạn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteGroup} className="bg-red-600 hover:bg-red-700">
+              {isSubmitting ? "Đang xóa..." : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex items-center justify-end space-x-4 text-sm font-medium">
         <Button variant="outline" size="sm" className="text-gray-600 border-orange-200" disabled>
