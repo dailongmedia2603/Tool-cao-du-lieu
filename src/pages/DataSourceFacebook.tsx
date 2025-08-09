@@ -43,6 +43,7 @@ const DataSourceFacebook = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newGroupUrl, setNewGroupUrl] = useState("");
+  const [newGroupId, setNewGroupId] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -71,77 +72,28 @@ const DataSourceFacebook = () => {
       showError("Vui lòng nhập URL của group.");
       return;
     }
-    setIsAdding(true);
-    let toastId = showLoading("Đang chuẩn bị...");
-
-    try {
-      // Step 1: Get Facebook API credentials
-      dismissToast(toastId);
-      toastId = showLoading("Đang lấy thông tin API Facebook...");
-      const { data: apiData, error: apiError } = await supabase
-        .from("luu_api_key")
-        .select("facebook_api_url, facebook_api_token")
-        .eq("id", 1)
-        .single();
-
-      if (apiError || !apiData?.facebook_api_url || !apiData?.facebook_api_token) {
-        dismissToast(toastId);
-        showError("Không tìm thấy API Facebook. Vui lòng thiết lập trong trang API Keys.");
-        setIsAdding(false);
-        return;
-      }
-      const { facebook_api_url: apiUrl, facebook_api_token: token } = apiData;
-
-      // Step 2: Get Group ID from Edge Function using Graph API via proxy
-      dismissToast(toastId);
-      toastId = showLoading("Đang lấy Group ID qua API...");
-      const { data: idData, error: idError } = await supabase.functions.invoke(
-        "get-facebook-group-id",
-        {
-          body: { group_url: newGroupUrl, apiUrl, token },
-        }
-      );
-
-      // Handle network errors or function invocation errors
-      if (idError) {
-        dismissToast(toastId);
-        showError(`Lỗi khi gọi function: ${idError.message}`);
-        setIsAdding(false);
-        return;
-      }
-
-      // Handle application-level errors returned by the function
-      if (!idData.success || !idData.groupId) {
-        dismissToast(toastId);
-        showError(idData.error || "Không thể lấy được Group ID. Vui lòng kiểm tra lại URL hoặc thử lại sau.");
-        setIsAdding(false);
-        return;
-      }
-
-      const groupId = idData.groupId;
-      dismissToast(toastId);
-      toastId = showLoading("Đã có ID, đang thêm group...");
-
-      // Step 3: Insert into database
-      const { error: insertError } = await supabase
-        .from("list_nguon_facebook")
-        .insert([{ group_url: newGroupUrl, group_id: groupId, origin: "Manual" }]);
-
-      dismissToast(toastId);
-      if (insertError) {
-        showError(`Thêm thất bại: ${insertError.message}`);
-      } else {
-        showSuccess("Thêm group thành công!");
-        setIsDialogOpen(false);
-        setNewGroupUrl("");
-        fetchGroups(); // Refresh the list
-      }
-    } catch (e: any) {
-        dismissToast(toastId);
-        showError(`Đã xảy ra lỗi: ${e.message}`);
-    } finally {
-        setIsAdding(false);
+    if (!newGroupId) {
+      showError("Vui lòng nhập ID của group.");
+      return;
     }
+    setIsAdding(true);
+    const toastId = showLoading("Đang thêm group...");
+
+    const { error } = await supabase
+      .from("list_nguon_facebook")
+      .insert([{ group_url: newGroupUrl, group_id: newGroupId, origin: "Manual" }]);
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Thêm thất bại: ${error.message}`);
+    } else {
+      showSuccess("Thêm group thành công!");
+      setIsDialogOpen(false);
+      setNewGroupUrl("");
+      setNewGroupId("");
+      fetchGroups(); // Refresh the list
+    }
+    setIsAdding(false);
   };
 
   const filteredGroups = groups.filter((group) =>
@@ -178,7 +130,7 @@ const DataSourceFacebook = () => {
             <DialogHeader>
               <DialogTitle>Thêm nguồn Group Facebook mới</DialogTitle>
               <DialogDescription>
-                Nhập URL của group Facebook bạn muốn theo dõi. Hệ thống sẽ tự động lấy ID.
+                Nhập URL và ID của group Facebook bạn muốn theo dõi.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -191,6 +143,15 @@ const DataSourceFacebook = () => {
                   placeholder="https://www.facebook.com/groups/..."
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="group-id">Group ID</Label>
+                <Input
+                  id="group-id"
+                  value={newGroupId}
+                  onChange={(e) => setNewGroupId(e.target.value)}
+                  placeholder="Nhập ID của group"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
@@ -199,7 +160,7 @@ const DataSourceFacebook = () => {
                 disabled={isAdding}
                 className="bg-brand-orange hover:bg-brand-orange/90 text-white"
               >
-                {isAdding ? "Đang xử lý..." : "Thêm"}
+                {isAdding ? "Đang thêm..." : "Thêm"}
               </Button>
             </DialogFooter>
           </DialogContent>
