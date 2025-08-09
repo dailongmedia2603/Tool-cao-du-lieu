@@ -200,6 +200,26 @@ const DataSourceWebsite = () => {
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    // Add data validation for the endpoint column (B)
+    const validation = {
+      type: 'list',
+      formula1: '"/scrape,/crawl,/map"',
+      showDropDown: true,
+      allowBlank: false,
+      error: 'Vui lòng chọn một endpoint hợp lệ từ danh sách: /scrape, /crawl, /map.',
+      errorTitle: 'Endpoint không hợp lệ',
+    };
+
+    // Apply validation to a range of cells, e.g., B2 to B101
+    if (!worksheet['!dataValidation']) {
+      worksheet['!dataValidation'] = [];
+    }
+    worksheet['!dataValidation'].push({
+      sqref: 'B2:B101', // Apply to 100 rows
+      opts: validation,
+    });
+
     XLSX.writeFile(workbook, "mau_import_website.xlsx");
   };
 
