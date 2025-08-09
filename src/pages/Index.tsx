@@ -259,7 +259,7 @@ const Index = () => {
 
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
   const websiteCampaigns = campaigns.filter(c => c.type === 'Website');
-  const allCampaigns = campaigns;
+  const combinedCampaigns = campaigns.filter(c => c.type === 'Tổng hợp');
 
   const getSourcesForEdit = (campaign: Campaign | null) => {
     if (!campaign) return { groups: [], websites: [] };
@@ -352,7 +352,7 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
-          <CampaignList campaigns={allCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+          <CampaignList campaigns={combinedCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
         </TabsContent>
       </Tabs>
 
