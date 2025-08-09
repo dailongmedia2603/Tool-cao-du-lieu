@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { dismissToast, showError, showLoading, showSuccess } from "@/utils/toast";
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 
 const Settings = () => {
   const [geminiApiKey, setGeminiApiKey] = useState("");
@@ -148,31 +147,13 @@ const Settings = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gemini-2.5-pro">
-                      <div>
-                        <div className="flex items-center">
-                          <span>Gemini 2.5 Pro</span>
-                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">gemini-2.5-pro</p>
-                      </div>
+                      Gemini 2.5 Pro
                     </SelectItem>
                     <SelectItem value="gemini-2.5-flash">
-                      <div>
-                        <div className="flex items-center">
-                          <span>Gemini 2.5 Flash</span>
-                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">gemini-2.5-flash</p>
-                      </div>
+                      Gemini 2.5 Flash
                     </SelectItem>
                     <SelectItem value="gemini-2.5-flash-lite">
-                      <div>
-                        <div className="flex items-center">
-                          <span>Gemini 2.5 Flash-Lite</span>
-                          <Badge variant="outline" className="ml-2 border-blue-500 text-blue-500">NEW</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">gemini-2.5-flash-lite</p>
-                      </div>
+                      Gemini 2.5 Flash-Lite
                     </SelectItem>
                   </SelectContent>
                 </Select>
