@@ -26,16 +26,28 @@ serve(async (req) => {
         })
     }
 
-    // Ensure apiUrl ends with a slash
-    const formattedApiUrl = apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`;
-    const testUrl = `${formattedApiUrl}me?fields=id&access_token=${token}`;
+    // Ensure the base URL ends with a slash to correctly resolve the 'me' endpoint.
+    const baseUrl = apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`;
+    const testUrl = `${baseUrl}me?fields=id&access_token=${token}`;
 
     const response = await fetch(testUrl, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      // The response was not valid JSON.
+      const errorMessage = `The proxy server returned an invalid response (HTTP Status: ${response.status}). The response was: "${responseText.substring(0, 200)}..."`;
+      return new Response(JSON.stringify({ success: false, message: errorMessage }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
 
     if (response.ok && responseData.id) {
       return new Response(JSON.stringify({ success: true, message: 'Connection successful!' }), {
@@ -43,14 +55,16 @@ serve(async (req) => {
         status: 200,
       })
     } else {
-      const errorMessage = responseData.error?.message || 'Connection failed. Please check your URL and Token.';
+      const errorMessage = responseData.error?.message || `Connection failed. The proxy returned: ${JSON.stringify(responseData)}`;
       return new Response(JSON.stringify({ success: false, message: errorMessage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
+    // This catches network errors, like DNS resolution failure or if the server is unreachable.
+    const errorMessage = `A network error occurred: ${error.message}. Please check the API URL and ensure the server is accessible.`;
+    return new Response(JSON.stringify({ success: false, message: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
