@@ -1,3 +1,4 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 
 const corsHeaders = {
@@ -11,15 +12,21 @@ serve(async (req) => {
   }
 
   try {
-    const { apiKey } = await req.json()
+    const { apiKey, model } = await req.json()
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key is required' }), {
+      return new Response(JSON.stringify({ success: false, message: 'API key is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 200,
       })
     }
+    if (!model) {
+        return new Response(JSON.stringify({ success: false, message: 'Model is required' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        })
+    }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
@@ -39,13 +46,13 @@ serve(async (req) => {
     } else {
       return new Response(JSON.stringify({ success: false, message: responseData.error?.message || 'Connection failed. Please check your API key.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: response.status,
+        status: 200,
       })
     }
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200,
     })
   }
 })

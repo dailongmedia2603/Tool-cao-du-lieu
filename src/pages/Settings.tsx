@@ -81,18 +81,20 @@ const Settings = () => {
     const toastId = showLoading("Testing connection...");
 
     const { data, error } = await supabase.functions.invoke("test-gemini", {
-      body: { apiKey: geminiApiKey },
+      body: { apiKey: geminiApiKey, model: geminiModel },
     });
 
     dismissToast(toastId);
     if (error) {
       showError(`Connection test failed: ${error.message}`);
-    } else {
+    } else if (data) {
       if (data.success) {
         showSuccess(data.message);
       } else {
         showError(`Connection test failed: ${data.message}`);
       }
+    } else {
+      showError("Connection test failed: An unknown error occurred.");
     }
     setIsTesting(false);
   };
