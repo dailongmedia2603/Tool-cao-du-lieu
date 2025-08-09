@@ -113,21 +113,21 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="api-ai" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 rounded-none border-b">
           <TabsTrigger
             value="api-ai"
-            className="data-[state=active]:bg-brand-orange-light data-[state=active]:text-brand-orange"
+            className="bg-transparent rounded-none p-0 py-3 text-gray-500 data-[state=active]:text-brand-orange data-[state=active]:border-b-2 data-[state=active]:border-brand-orange -mb-px"
           >
             API AI
           </TabsTrigger>
           <TabsTrigger
             value="api-facebook"
-            className="data-[state=active]:bg-brand-orange-light data-[state=active]:text-brand-orange"
+            className="bg-transparent rounded-none p-0 py-3 text-gray-500 data-[state=active]:text-brand-orange data-[state=active]:border-b-2 data-[state=active]:border-brand-orange -mb-px"
           >
             API Facebook
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="api-ai">
+        <TabsContent value="api-ai" className="pt-6">
           <Card className="border-orange-200">
             <CardHeader>
               <CardTitle>Gemini API</CardTitle>
@@ -204,7 +204,7 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="api-facebook">
+        <TabsContent value="api-facebook" className="pt-6">
           <Card className="border-orange-200">
             <CardHeader>
               <CardTitle>Facebook API</CardTitle>
