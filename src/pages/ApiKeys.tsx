@@ -103,7 +103,7 @@ const ApiKeys = () => {
     setGeminiTestStatus(null);
     const toastId = showLoading("Testing connection...");
 
-    const { data, error } = await supabase.functions.invoke("test-gemini", {
+    const { data, error } = await supabase.functions.invoke("test-ket-noi-gemini", {
       body: { apiKey: geminiApiKey, model: geminiModel },
     });
 
@@ -139,7 +139,7 @@ const ApiKeys = () => {
     setFacebookTestStatus(null);
     const toastId = showLoading("Testing Facebook connection...");
 
-    const { data, error } = await supabase.functions.invoke("test-facebook", {
+    const { data, error } = await supabase.functions.invoke("test-ket-noi-facebook", {
       body: { apiUrl: facebookApiUrl, token: facebookApiToken },
     });
 
