@@ -109,7 +109,7 @@ const DataSourceWebsite = () => {
       <div className="flex items-center justify-between space-x-4">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="Tìm kiếm bằng URL" className="pl-10" />
+          <Input placeholder="Tìm kiếm bằng URL" className="pl-10 border-orange-200" />
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -163,7 +163,7 @@ const DataSourceWebsite = () => {
         </Dialog>
       </div>
 
-      <div className="border rounded-lg bg-white">
+      <div className="border border-orange-200 rounded-lg bg-white">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
@@ -217,11 +217,11 @@ const DataSourceWebsite = () => {
       </div>
 
       <div className="flex items-center justify-end space-x-4 text-sm font-medium">
-        <Button variant="outline" size="sm" className="text-gray-600" disabled>
+        <Button variant="outline" size="sm" className="text-gray-600 border-orange-200" disabled>
           Trước
         </Button>
         <span className="text-gray-800">Trang 1</span>
-        <Button variant="outline" size="sm" className="text-gray-600">
+        <Button variant="outline" size="sm" className="text-gray-600 border-orange-200">
           Sau
         </Button>
       </div>
