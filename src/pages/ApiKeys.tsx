@@ -56,7 +56,7 @@ const ApiKeys = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
-        .from("settings")
+        .from("luu_api_key")
         .select("*")
         .eq("id", 1)
         .single();
@@ -82,7 +82,7 @@ const ApiKeys = () => {
     const toastId = showLoading("Saving settings...");
 
     const { error } = await supabase
-      .from("settings")
+      .from("luu_api_key")
       .upsert({
         id: 1,
         gemini_api_key: geminiApiKey,
