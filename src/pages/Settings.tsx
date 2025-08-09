@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { dismissToast, showError, showLoading, showSuccess } from "@/utils/toast";
+import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const Settings = () => {
@@ -26,6 +27,7 @@ const Settings = () => {
   const [facebookApiUrl, setFacebookApiUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState<"success" | "error" | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -77,6 +79,7 @@ const Settings = () => {
       return;
     }
     setIsTesting(true);
+    setTestStatus(null);
     const toastId = showLoading("Testing connection...");
 
     const { data, error } = await supabase.functions.invoke("test-gemini", {
@@ -86,14 +89,18 @@ const Settings = () => {
     dismissToast(toastId);
     if (error) {
       showError(`Connection test failed: ${error.message}`);
+      setTestStatus("error");
     } else if (data) {
       if (data.success) {
         showSuccess(data.message);
+        setTestStatus("success");
       } else {
         showError(`Connection test failed: ${data.message}`);
+        setTestStatus("error");
       }
     } else {
       showError("Connection test failed: An unknown error occurred.");
+      setTestStatus("error");
     }
     setIsTesting(false);
   };
@@ -136,7 +143,10 @@ const Settings = () => {
                   id="gemini-api-key"
                   placeholder="Enter your Gemini API Key"
                   value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  onChange={(e) => {
+                    setGeminiApiKey(e.target.value);
+                    setTestStatus(null);
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -158,22 +168,38 @@ const Settings = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex space-x-2">
-                <Button
-                  onClick={handleTestConnection}
-                  disabled={isTesting || isSaving}
-                  variant="secondary"
-                  className="bg-gray-800 text-white hover:bg-gray-700"
-                >
-                  {isTesting ? "Testing..." : "Test Connection"}
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving || isSaving}
-                  className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleTestConnection}
+                    disabled={isTesting || isSaving}
+                    variant="secondary"
+                    className="bg-gray-800 text-white hover:bg-gray-700"
+                  >
+                    {isTesting ? "Testing..." : "Test Connection"}
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving || isSaving}
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                <div>
+                  {testStatus === "success" && (
+                    <div className="flex items-center text-sm font-medium text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-1.5" />
+                      Thành công
+                    </div>
+                  )}
+                  {testStatus === "error" && (
+                    <div className="flex items-center text-sm font-medium text-red-600">
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Thất bại
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
