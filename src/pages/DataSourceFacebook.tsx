@@ -293,13 +293,23 @@ const DataSourceFacebook = () => {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="import-file">Chọn file</Label>
+                  <Label>Chọn file</Label>
+                  <Label htmlFor="import-file" className="w-full cursor-pointer">
+                    <div className="flex items-center justify-between w-full h-10 px-3 text-sm border rounded-md border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                      <span className="text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                        {importFile ? importFile.name : "No file chosen"}
+                      </span>
+                      <div className="px-3 py-1 ml-4 text-sm font-semibold rounded-md shrink-0 bg-brand-orange-light text-brand-orange hover:bg-orange-200">
+                        Choose File
+                      </div>
+                    </div>
+                  </Label>
                   <Input
                     id="import-file"
                     type="file"
+                    className="hidden"
                     accept=".xlsx, .xls, .csv"
                     onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-orange-light file:text-brand-orange hover:file:bg-orange-200"
                   />
                 </div>
                 <Button variant="link" onClick={handleDownloadTemplate} className="text-brand-orange justify-start p-0 h-auto">
