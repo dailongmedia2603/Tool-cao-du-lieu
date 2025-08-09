@@ -89,7 +89,7 @@ const CampaignList = ({
                 </TableCell>
                 <TableCell>
                   {campaign.end_date
-                    ? format(new Date(campaign.end_date), "dd/MM/yyyy")
+                    ? format(new Date(campaign.end_date), "dd/MM/yyyy HH:mm")
                     : "Không có"}
                 </TableCell>
                 <TableCell className="text-right">
