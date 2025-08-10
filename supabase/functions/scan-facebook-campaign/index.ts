@@ -20,8 +20,8 @@ const toUnixTimestamp = (dateStr: string | null | undefined): number | null => {
 
 // Helper to find keywords in content
 const findKeywords = (content: string, keywords: string[]): string[] => {
+    if (!content) return [];
     const found: string[] = [];
-    if (!content) return found;
     const lowerContent = content.toLowerCase();
     for (const keyword of keywords) {
         if (lowerContent.includes(keyword.toLowerCase())) {
@@ -239,7 +239,10 @@ serve(async (req) => {
 
     if (finalResults.length > 0) {
         const dataToInsert = campaign.type === 'Tổng hợp' 
-            ? finalResults.map(r => ({ ...r, source_type: 'Facebook' })) 
+            ? finalResults.map(r => {
+                const { content, ...rest } = r;
+                return { ...rest, description: content, source_type: 'Facebook' };
+            })
             : finalResults;
 
         const { error: insertError } = await supabaseAdmin

@@ -27,9 +27,13 @@ serve(async (req) => {
     );
 
     let tableName = '';
+    let selectStatement = '*';
+
     switch (campaign_type) {
       case 'Facebook':
         tableName = 'Bao_cao_Facebook';
+        // Alias content to description to create a consistent field for the frontend
+        selectStatement = 'id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, description:content';
         break;
       case 'Website':
         tableName = 'Bao_cao_Website';
@@ -46,7 +50,7 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin
       .from(tableName)
-      .select('*')
+      .select(selectStatement)
       .eq('campaign_id', campaign_id)
       .order('posted_at', { ascending: false });
 
