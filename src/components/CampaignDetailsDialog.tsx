@@ -23,6 +23,7 @@ import {
   CalendarDays,
   Tags,
   Bot,
+  Code,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,7 @@ export const CampaignDetailsDialog = ({
     keywords,
     ai_filter_enabled,
     ai_prompt,
+    website_scan_type,
   } = campaign;
 
   const isFacebook = type === "Facebook";
@@ -124,6 +126,12 @@ export const CampaignDetailsDialog = ({
                   {type}
                 </Badge>
               </DetailItem>
+
+              {(isWebsite || isCombined) && website_scan_type && (
+                <DetailItem icon={Code} label="Loại quét Website">
+                  <Badge variant="secondary">{website_scan_type}</Badge>
+                </DetailItem>
+              )}
 
               <DetailItem icon={Timer} label="Trạng thái">
                 <Badge

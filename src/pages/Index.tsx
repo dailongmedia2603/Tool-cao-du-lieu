@@ -33,6 +33,7 @@ export interface Campaign {
   ai_filter_enabled: boolean;
   ai_prompt: string | null;
   next_scan_at: string | null;
+  website_scan_type: string | null;
 }
 
 const Index = () => {
@@ -61,6 +62,7 @@ const Index = () => {
   const [websiteScanFrequency, setWebsiteScanFrequency] = useState<number>(1);
   const [websiteScanUnit, setWebsiteScanUnit] = useState("day");
   const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
+  const [websiteScanType, setWebsiteScanType] = useState("/scrape");
 
   // Combined form state
   const [combinedCampaignName, setCombinedCampaignName] = useState("");
@@ -70,6 +72,7 @@ const Index = () => {
   const [combinedScanFrequency, setCombinedScanFrequency] = useState<number>(1);
   const [combinedScanUnit, setCombinedScanUnit] = useState("day");
   const [isCreatingCombined, setIsCreatingCombined] = useState(false);
+  const [combinedWebsiteScanType, setCombinedWebsiteScanType] = useState("/scrape");
 
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -84,6 +87,7 @@ const Index = () => {
   const [updatedKeywords, setUpdatedKeywords] = useState("");
   const [updatedUseAiFilter, setUpdatedUseAiFilter] = useState(false);
   const [updatedAiPrompt, setUpdatedAiPrompt] = useState("");
+  const [updatedWebsiteScanType, setUpdatedWebsiteScanType] = useState("/scrape");
 
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -151,6 +155,7 @@ const Index = () => {
     setWebsiteEndDate(undefined);
     setWebsiteScanFrequency(1);
     setWebsiteScanUnit("day");
+    setWebsiteScanType("/scrape");
   };
 
   const resetCombinedForm = () => {
@@ -160,6 +165,7 @@ const Index = () => {
     setCombinedEndDate(undefined);
     setCombinedScanFrequency(1);
     setCombinedScanUnit("day");
+    setCombinedWebsiteScanType("/scrape");
   };
 
   const handleCreateCampaign = async (type: 'Facebook' | 'Website' | 'Tổng hợp') => {
@@ -192,6 +198,9 @@ const Index = () => {
       localScanUnit = websiteScanUnit;
       setIsCreatingState = setIsCreatingWebsite;
       resetForm = resetWebsiteForm;
+      payload = {
+        website_scan_type: websiteScanType,
+      };
     } else { // Combined
       if (!combinedCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
       if (combinedSelectedGroups.length === 0 && combinedSelectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một nguồn (Group hoặc Website).");
@@ -202,6 +211,9 @@ const Index = () => {
       localScanUnit = combinedScanUnit;
       setIsCreatingState = setIsCreatingCombined;
       resetForm = resetCombinedForm;
+      payload = {
+        website_scan_type: combinedWebsiteScanType,
+      };
     }
 
     setIsCreatingState(true);
@@ -272,6 +284,9 @@ const Index = () => {
     setUpdatedKeywords(campaign.keywords || "");
     setUpdatedUseAiFilter(campaign.ai_filter_enabled || false);
     setUpdatedAiPrompt(campaign.ai_prompt || "");
+    if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
+      setUpdatedWebsiteScanType(campaign.website_scan_type || '/scrape');
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -327,6 +342,10 @@ const Index = () => {
         ai_filter_enabled: updatedUseAiFilter,
         ai_prompt: updatedUseAiFilter ? updatedAiPrompt : null,
       };
+    }
+
+    if (editingCampaign.type === 'Website' || editingCampaign.type === 'Tổng hợp') {
+      payload.website_scan_type = updatedWebsiteScanType;
     }
 
     const { error } = await supabase.from('danh_sach_chien_dich').update(payload).eq('id', editingCampaign.id);
@@ -484,7 +503,7 @@ const Index = () => {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-6 bg-white">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
                     <div className="lg:col-span-2 space-y-2">
                       <Label>Tên chiến dịch</Label>
                       <Input placeholder="VD: Quét giá sản phẩm" value={websiteCampaignName} onChange={(e) => setWebsiteCampaignName(e.target.value)} />
@@ -493,14 +512,25 @@ const Index = () => {
                       <Label>Loại chiến dịch</Label>
                       <Input value="Website" disabled />
                     </div>
-                    <div className="lg:col-span-3 space-y-2">
+                    <div className="space-y-2">
+                      <Label>Loại quét</Label>
+                      <Select value={websiteScanType} onValueChange={setWebsiteScanType}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="/scrape">/scrape</SelectItem>
+                          <SelectItem value="/crawl">/crawl</SelectItem>
+                          <SelectItem value="/map">/map</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="lg:col-span-4 space-y-2">
                       <div className="flex items-center space-x-2">
                         <Label>Chọn Website</Label>
                         {selectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{selectedWebsites.length}</span>)}
                       </div>
                       <MultiSelectCombobox options={websiteSources} selected={selectedWebsites} onChange={setSelectedWebsites} placeholder="Chọn một hoặc nhiều website" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
                     </div>
-                    <div className="space-y-2">
+                    <div className="lg:col-span-2 space-y-2">
                       <Label>Thời gian kết thúc</Label>
                       <DateTimePicker date={websiteEndDate} setDate={setWebsiteEndDate} />
                     </div>
@@ -547,9 +577,22 @@ const Index = () => {
                       <Label>Tên chiến dịch</Label>
                       <Input placeholder="VD: Chiến dịch tổng hợp tháng 8" value={combinedCampaignName} onChange={(e) => setCombinedCampaignName(e.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Loại chiến dịch</Label>
-                      <Input value="Tổng hợp" disabled />
+                    <div className="flex items-end space-x-4">
+                      <div className="space-y-2 flex-1">
+                        <Label>Loại chiến dịch</Label>
+                        <Input value="Tổng hợp" disabled />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <Label>Loại quét Website</Label>
+                        <Select value={combinedWebsiteScanType} onValueChange={setCombinedWebsiteScanType}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="/scrape">/scrape</SelectItem>
+                            <SelectItem value="/crawl">/crawl</SelectItem>
+                            <SelectItem value="/map">/map</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
@@ -637,7 +680,20 @@ const Index = () => {
             )}
 
             {editingCampaign?.type !== 'Facebook' && (
-              <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
+              <>
+                <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
+                <div className="space-y-2">
+                  <Label>Loại quét</Label>
+                  <Select value={updatedWebsiteScanType} onValueChange={setUpdatedWebsiteScanType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="/scrape">/scrape</SelectItem>
+                      <SelectItem value="/crawl">/crawl</SelectItem>
+                      <SelectItem value="/map">/map</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             <div className="space-y-2"><Label>Tần suất quét</Label><div className="flex items-center space-x-2"><Input type="number" min="1" value={updatedScanFrequency} onChange={(e) => setUpdatedScanFrequency(parseInt(e.target.value, 10))} className="w-24" /><Select value={updatedScanUnit} onValueChange={setUpdatedScanUnit}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="minute">Phút</SelectItem><SelectItem value="hour">Giờ</SelectItem><SelectItem value="day">Ngày</SelectItem></SelectContent></Select></div></div>
