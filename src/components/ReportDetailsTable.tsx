@@ -37,28 +37,15 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
       }
       setLoading(true);
       
-      let tableName = '';
-      switch (selectedCampaign.type) {
-        case 'Facebook':
-          tableName = 'Bao_cao_Facebook';
-          break;
-        case 'Website':
-          tableName = 'Bao_cao_Website';
-          break;
-        case 'Tổng hợp':
-          tableName = 'Bao_cao_tong_hop';
-          break;
-        default:
-          setReportData([]);
-          setLoading(false);
-          return;
-      }
-
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('campaign_id', selectedCampaign.id)
-        .order('posted_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke(
+        "get-report-data",
+        {
+          body: { 
+            campaign_id: selectedCampaign.id,
+            campaign_type: selectedCampaign.type 
+          },
+        }
+      );
 
       if (error) {
         showError(`Không thể tải dữ liệu báo cáo: ${error.message}`);
