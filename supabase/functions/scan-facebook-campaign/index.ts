@@ -92,23 +92,26 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
     }
 
-    // Lấy thời gian của lần quét thành công cuối cùng
-    const { data: lastScanData, error: lastScanError } = await supabaseAdmin
-        .from('scan_logs')
-        .select('scan_time')
+    // Lấy thời gian của BÀI VIẾT cuối cùng đã được lưu
+    const { data: latestPostData, error: latestPostError } = await supabaseAdmin
+        .from('Bao_cao_Facebook')
+        .select('posted_at')
         .eq('campaign_id', campaign.id)
-        .eq('status', 'success')
-        .order('scan_time', { ascending: false })
+        .order('posted_at', { ascending: false })
         .limit(1)
         .single();
 
-    if (lastScanError && lastScanError.code !== 'PGRST116') { // Bỏ qua lỗi 'không tìm thấy dòng nào'
-        throw new Error(`Lỗi khi lấy lần quét cuối cùng: ${lastScanError.message}`);
+    if (latestPostError && latestPostError.code !== 'PGRST116') { // Bỏ qua lỗi 'không tìm thấy dòng nào'
+        throw new Error(`Lỗi khi lấy bài viết cuối cùng: ${latestPostError.message}`);
     }
 
     // Xác định khoảng thời gian quét
-    const lastScanTime = lastScanData ? lastScanData.scan_time : null;
-    const sinceTimestamp = toUnixTimestamp(lastScanTime || campaign.scan_start_date);
+    const lastPostTime = latestPostData ? latestPostData.posted_at : null;
+    // Sử dụng thời gian của bài viết cuối cùng + 1 giây để tránh trùng lặp, hoặc ngày bắt đầu của chiến dịch
+    const sinceTimestamp = lastPostTime 
+        ? toUnixTimestamp(lastPostTime)! + 1 
+        : toUnixTimestamp(campaign.scan_start_date);
+        
     const untilTimestamp = Math.floor(Date.now() / 1000);
 
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
