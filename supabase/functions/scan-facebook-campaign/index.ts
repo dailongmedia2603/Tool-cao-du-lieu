@@ -18,6 +18,22 @@ const toUnixTimestamp = (dateStr: string | null | undefined): number | null => {
   return Math.floor(new Date(dateStr).getTime() / 1000);
 };
 
+// Helper function to format Unix timestamp for humans
+const formatTimestampForHumans = (timestamp: number | null): string | null => {
+    if (timestamp === null) return 'N/A';
+    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1); // Month is 0-indexed
+    const year = date.getFullYear();
+
+    return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
+};
+
 // Helper to find keywords in content
 const findKeywords = (content: string, keywords: string[]): string[] => {
     if (!content) return [];
@@ -268,10 +284,12 @@ serve(async (req) => {
     
     const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
     await logScan(supabaseAdmin, campaign_id_from_req, 'success', successMessage, { 
+        since: sinceTimestamp,
+        "since (readable)": formatTimestampForHumans(sinceTimestamp),
+        until: untilTimestamp,
+        "until (readable)": formatTimestampForHumans(untilTimestamp),
         api_calls: apiCallDetails, 
         found_posts: finalResults.length,
-        since: sinceTimestamp,
-        until: untilTimestamp,
     }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {
@@ -283,7 +301,9 @@ serve(async (req) => {
     await logScan(supabaseAdmin, campaign_id_from_req, 'error', error.message, { 
         stack: error.stack,
         since: sinceTimestamp,
+        "since (readable)": formatTimestampForHumans(sinceTimestamp),
         until: untilTimestamp,
+        "until (readable)": formatTimestampForHumans(untilTimestamp),
     }, 'final');
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
