@@ -15,6 +15,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PlusCircle } from "lucide-react";
 
 export interface Campaign {
   id: string;
@@ -342,7 +343,10 @@ const Index = () => {
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
               <AccordionTrigger className="p-4 bg-gradient-to-r from-brand-orange-light to-white hover:no-underline">
-                <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                <div className="flex items-center space-x-3">
+                  <PlusCircle className="h-6 w-6 text-brand-orange" />
+                  <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-6 bg-white">
@@ -412,7 +416,10 @@ const Index = () => {
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
               <AccordionTrigger className="p-4 bg-gradient-to-r from-brand-orange-light to-white hover:no-underline">
-                <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                <div className="flex items-center space-x-3">
+                  <PlusCircle className="h-6 w-6 text-brand-orange" />
+                  <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-6 bg-white">
@@ -467,7 +474,10 @@ const Index = () => {
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
               <AccordionTrigger className="p-4 bg-gradient-to-r from-brand-orange-light to-white hover:no-underline">
-                <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                <div className="flex items-center space-x-3">
+                  <PlusCircle className="h-6 w-6 text-brand-orange" />
+                  <h3 className="text-lg font-semibold text-gray-800">TẠO CHIẾN DỊCH MỚI</h3>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-6 bg-white">
