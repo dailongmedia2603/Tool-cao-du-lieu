@@ -410,53 +410,57 @@ const Index = () => {
   const handleManualScan = async (campaign: Campaign) => {
     setManuallyScanningId(campaign.id);
     const toastId = showLoading(`Đang quét chiến dịch "${campaign.name}"...`);
+    try {
+      const scanPromises = [];
 
-    const scanPromises = [];
+      if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
+          const facebookSources = campaign.sources.filter(s => !s.startsWith('http') && !s.startsWith('www'));
+          if (facebookSources.length > 0) {
+              scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
+                  body: { campaign_id: campaign.id },
+              }));
+          }
+      }
+      if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
+          const websiteSources = campaign.sources.filter(s => s.startsWith('http') || s.startsWith('www'));
+          if (websiteSources.length > 0) {
+              scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
+                  body: { campaign_id: campaign.id },
+              }));
+          }
+      }
 
-    if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
-        const facebookSources = campaign.sources.filter(s => !s.startsWith('http') && !s.startsWith('www'));
-        if (facebookSources.length > 0) {
-            scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
-                body: { campaign_id: campaign.id },
-            }));
-        }
-    }
-    if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
-        const websiteSources = campaign.sources.filter(s => s.startsWith('http') || s.startsWith('www'));
-        if (websiteSources.length > 0) {
-            scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
-                body: { campaign_id: campaign.id },
-            }));
-        }
-    }
+      if (scanPromises.length === 0) {
+          dismissToast(toastId);
+          showError("Chiến dịch này không có nguồn nào để quét.");
+          return;
+      }
 
-    if (scanPromises.length === 0) {
+      const results = await Promise.allSettled(scanPromises);
+      dismissToast(toastId);
+
+      let allSuccess = true;
+      let messages: string[] = [];
+      results.forEach(result => {
+          if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
+              allSuccess = false;
+              const errorDetails = result.status === 'fulfilled' ? result.value.error : result.reason;
+              const errorMessage = errorDetails.message || JSON.stringify(errorDetails);
+              showError(`Quét thất bại: ${errorMessage}`);
+          } else if (result.status === 'fulfilled' && result.value.data?.message) {
+              messages.push(result.value.data.message);
+          }
+      });
+
+      if (allSuccess) {
+          showSuccess("Quét thủ công hoàn tất! " + messages.join(" "));
+      }
+    } catch (error: any) {
         dismissToast(toastId);
-        showError("Chiến dịch này không có nguồn nào để quét.");
+        showError(`Lỗi không mong muốn khi quét: ${error.message}`);
+    } finally {
         setManuallyScanningId(null);
-        return;
     }
-
-    const results = await Promise.allSettled(scanPromises);
-    dismissToast(toastId);
-
-    let allSuccess = true;
-    let messages: string[] = [];
-    results.forEach(result => {
-        if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
-            allSuccess = false;
-            const errorMessage = result.status === 'rejected' ? result.reason.message : result.value.error.message;
-            showError(`Quét thất bại: ${errorMessage}`);
-        } else if (result.status === 'fulfilled' && result.value.data?.message) {
-            messages.push(result.value.data.message);
-        }
-    });
-
-    if (allSuccess) {
-        showSuccess("Quét thủ công hoàn tất! " + messages.join(" "));
-    }
-    
-    setManuallyScanningId(null);
   };
 
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
