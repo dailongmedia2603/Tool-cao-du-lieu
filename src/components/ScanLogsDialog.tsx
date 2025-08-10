@@ -8,7 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, Clock, Code } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code, CalendarRange } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ScanLog {
@@ -25,6 +25,12 @@ interface ScanLogsDialogProps {
   logs: ScanLog[];
   loading: boolean;
 }
+
+const formatTimestamp = (timestamp: number | null | undefined) => {
+  if (!timestamp) return 'N/A';
+  // Timestamp is in seconds, convert to milliseconds for Date object
+  return format(new Date(timestamp * 1000), "HH:mm dd/MM/yyyy");
+};
 
 export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogsDialogProps) => {
   return (
@@ -55,10 +61,18 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
                           )}
                           <div className="text-left">
                             <p className="font-semibold text-gray-800">{log.message}</p>
-                            <p className="text-sm text-gray-500 flex items-center">
-                              <Clock className="h-3 w-3 mr-1.5" />
-                              {format(new Date(log.scan_time), "dd/MM/yyyy, HH:mm:ss")}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                              <p className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1.5" />
+                                {format(new Date(log.scan_time), "dd/MM/yyyy, HH:mm:ss")}
+                              </p>
+                              {log.details?.since && log.details?.until && (
+                                <p className="flex items-center">
+                                  <CalendarRange className="h-3 w-3 mr-1.5" />
+                                  {`Từ ${formatTimestamp(log.details.since)} đến ${formatTimestamp(log.details.until)}`}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <Badge variant={log.status === 'success' ? 'default' : 'destructive'} className={cn(log.status === 'success' && 'bg-green-500')}>

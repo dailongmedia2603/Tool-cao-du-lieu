@@ -42,6 +42,8 @@ serve(async (req) => {
   );
   
   let campaign_id_from_req = null;
+  let sinceTimestamp: number | null = null;
+  let untilTimestamp: number | null = null;
 
   const logScan = async (campaign_id: string, status: string, message: string, details: any = null) => {
     if (!campaign_id) return;
@@ -107,12 +109,11 @@ serve(async (req) => {
 
     // Xác định khoảng thời gian quét
     const lastPostTime = latestPostData ? latestPostData.posted_at : null;
-    // Sử dụng thời gian của bài viết cuối cùng + 1 giây để tránh trùng lặp, hoặc ngày bắt đầu của chiến dịch
-    const sinceTimestamp = lastPostTime 
+    sinceTimestamp = lastPostTime 
         ? toUnixTimestamp(lastPostTime)! + 1 
         : toUnixTimestamp(campaign.scan_start_date);
         
-    const untilTimestamp = Math.floor(Date.now() / 1000);
+    untilTimestamp = Math.floor(Date.now() / 1000);
 
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
     const allPostsData = [];
@@ -232,7 +233,12 @@ serve(async (req) => {
     }
     
     const successMessage = `Quét hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
-    await logScan(campaign_id_from_req, 'success', successMessage, { api_calls: apiCallDetails, found_posts: finalResults.length });
+    await logScan(campaign_id_from_req, 'success', successMessage, { 
+        api_calls: apiCallDetails, 
+        found_posts: finalResults.length,
+        since: sinceTimestamp,
+        until: untilTimestamp,
+    });
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -240,7 +246,11 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error(error);
-    await logScan(campaign_id_from_req, 'error', error.message, { stack: error.stack });
+    await logScan(campaign_id_from_req, 'error', error.message, { 
+        stack: error.stack,
+        since: sinceTimestamp,
+        until: untilTimestamp,
+    });
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
