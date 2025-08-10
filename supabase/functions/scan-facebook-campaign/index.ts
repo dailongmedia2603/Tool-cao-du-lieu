@@ -38,7 +38,8 @@ const logScan = async (supabaseAdmin: any, campaign_id: string, status: string, 
         status,
         message,
         details,
-        log_type
+        log_type,
+        source_type: 'Facebook'
     });
 };
 
