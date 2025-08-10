@@ -92,19 +92,35 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
     }
 
+    // Lấy thời gian của lần quét thành công cuối cùng
+    const { data: lastScanData, error: lastScanError } = await supabaseAdmin
+        .from('scan_logs')
+        .select('scan_time')
+        .eq('campaign_id', campaign.id)
+        .eq('status', 'success')
+        .order('scan_time', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (lastScanError && lastScanError.code !== 'PGRST116') { // Bỏ qua lỗi 'không tìm thấy dòng nào'
+        throw new Error(`Lỗi khi lấy lần quét cuối cùng: ${lastScanError.message}`);
+    }
+
+    // Xác định khoảng thời gian quét
+    const lastScanTime = lastScanData ? lastScanData.scan_time : null;
+    const sinceTimestamp = toUnixTimestamp(lastScanTime || campaign.scan_start_date);
+    const untilTimestamp = Math.floor(Date.now() / 1000);
+
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
     const allPostsData = [];
     const apiCallDetails = [];
 
     for (const groupId of campaign.sources) {
-        const since = toUnixTimestamp(campaign.scan_start_date);
-        const until = Math.floor(Date.now() / 1000);
-        
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}`;
-        if (since) {
-            url += `&since=${since}`;
+        if (sinceTimestamp) {
+            url += `&since=${sinceTimestamp}`;
         }
-        url += `&until=${until}`;
+        url += `&until=${untilTimestamp}`;
 
         const fbResponse = await fetch(url);
         const responseText = await fbResponse.text();
