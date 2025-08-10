@@ -51,7 +51,7 @@ serve(async (req) => {
     // 1. Fetch API keys and campaign details in parallel
     const [apiKeyRes, campaignRes] = await Promise.all([
         supabaseAdmin.from('luu_api_key').select('*').eq('id', 1).single(),
-        supabaseAdmin.from('campaigns').select('*').eq('id', campaign_id).single()
+        supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
     ]);
 
     if (apiKeyRes.error) throw new Error(`Failed to fetch API keys: ${apiKeyRes.error.message}`);

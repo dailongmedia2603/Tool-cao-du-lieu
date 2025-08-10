@@ -95,7 +95,7 @@ const Index = () => {
   const fetchCampaigns = async () => {
     setLoadingCampaigns(true);
     const { data, error } = await supabase
-      .from('campaigns')
+      .from('danh_sach_chien_dich')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -213,7 +213,7 @@ const Index = () => {
       ...payload
     };
 
-    const { data: newCampaign, error } = await supabase.from('campaigns').insert(finalPayload).select().single();
+    const { data: newCampaign, error } = await supabase.from('danh_sach_chien_dich').insert(finalPayload).select().single();
     
     dismissToast(toastId);
     if (error) {
@@ -242,7 +242,7 @@ const Index = () => {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     const toastId = showLoading("Đang cập nhật trạng thái...");
-    const { error } = await supabase.from('campaigns').update({ status: newStatus }).eq('id', id);
+    const { error } = await supabase.from('danh_sach_chien_dich').update({ status: newStatus }).eq('id', id);
     dismissToast(toastId);
     if (error) showError("Cập nhật thất bại.");
     else {
@@ -291,7 +291,7 @@ const Index = () => {
       };
     }
 
-    const { error } = await supabase.from('campaigns').update(payload).eq('id', editingCampaign.id);
+    const { error } = await supabase.from('danh_sach_chien_dich').update(payload).eq('id', editingCampaign.id);
     
     dismissToast(toastId);
     setIsUpdating(false);
@@ -314,7 +314,7 @@ const Index = () => {
     if (!deletingCampaign) return;
     setIsDeleting(true);
     const toastId = showLoading("Đang xóa chiến dịch...");
-    const { error } = await supabase.from('campaigns').delete().eq('id', deletingCampaign.id);
+    const { error } = await supabase.from('danh_sach_chien_dich').delete().eq('id', deletingCampaign.id);
     dismissToast(toastId);
     setIsDeleting(false);
     if (error) {

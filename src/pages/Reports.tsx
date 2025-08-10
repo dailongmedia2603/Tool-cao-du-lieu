@@ -20,7 +20,7 @@ const Reports = () => {
     const fetchCampaigns = async () => {
       setLoadingCampaigns(true);
       const { data, error } = await supabase
-        .from('campaigns')
+        .from('danh_sach_chien_dich')
         .select('*')
         .order('created_at', { ascending: false });
 
