@@ -8,12 +8,13 @@ import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ExternalLink, Download, Filter, FileText, X } from 'lucide-react';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
+import * as XLSX from "xlsx";
 
 interface ReportData {
   id: string;
@@ -145,6 +146,67 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!selectedCampaign || filteredData.length === 0) {
+      showError("Không có dữ liệu để xuất file.");
+      return;
+    }
+
+    const isFacebook = selectedCampaign.type === 'Facebook';
+
+    const sentimentText = (s: ReportData['sentiment']) => {
+      switch (s) {
+        case 'positive': return 'Tích cực';
+        case 'negative': return 'Tiêu cực';
+        case 'neutral': return 'Trung tính';
+        default: return 'Chưa phân loại';
+      }
+    };
+
+    const dataToExport = filteredData.map(item => {
+      if (isFacebook) {
+        return {
+          'Nội dung bài viết': item.content,
+          'Thời gian đăng': item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+          'Từ khoá': item.keywords_found?.join(', ') || 'N/A',
+          'AI đánh giá': item.ai_evaluation || 'N/A',
+          'Cảm xúc': sentimentText(item.sentiment),
+          'Link bài viết': item.source_url,
+        };
+      } else { // Website or Combined
+        return {
+          'Nội dung': item.content,
+          'Tác giả': item.author || 'N/A',
+          'Thời gian': item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+          'Cảm xúc': sentimentText(item.sentiment),
+          'Link bài viết': item.source_url,
+        };
+      }
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Báo cáo");
+
+    // Auto-adjust column widths
+    const colWidths = Object.keys(dataToExport[0]).map(key => {
+      let maxLength = key.length;
+      if (key === 'Nội dung bài viết' || key === 'Nội dung') {
+        maxLength = 60; // Set a fixed width for content columns
+      } else {
+        maxLength = Math.max(
+          key.length,
+          ...dataToExport.map(row => (row as any)[key]?.toString().length || 0)
+        );
+      }
+      return { wch: maxLength + 2 };
+    });
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, `Bao_cao_${selectedCampaign.name.replace(/\s+/g, '_')}.xlsx`);
+    showSuccess("Xuất file Excel thành công!");
+  };
+
   const getSentimentBadge = (sentiment: ReportData['sentiment']) => {
     switch (sentiment) {
       case 'positive':
@@ -233,7 +295,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
+              <Button variant="outline" size="sm" onClick={handleExportToExcel}><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
             </div>
           </div>
         </CardHeader>
