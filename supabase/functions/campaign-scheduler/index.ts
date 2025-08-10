@@ -31,8 +31,6 @@ const calculateNextScan = (lastScan: Date, frequency: number, unit: string): Dat
 };
 
 serve(async (req) => {
-    console.log(`[kiem-tra-chien-dich-den-han] Function invoked with method: ${req.method}`);
-
     if (req.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders })
     }
@@ -48,36 +46,19 @@ serve(async (req) => {
         const now = new Date();
         const nowISO = now.toISOString();
 
-        // 1. Lấy tất cả các chiến dịch có khả năng chạy (đang hoạt động và chưa hết hạn)
-        const { data: activeCampaigns, error } = await supabaseAdmin
+        // Lấy tất cả các chiến dịch đến hạn quét trực tiếp từ DB
+        const { data: campaignsToRun, error } = await supabaseAdmin
             .from('danh_sach_chien_dich')
             .select('*')
             .eq('status', 'active')
-            .or(`end_date.is.null,end_date.gt.${nowISO}`);
+            .or(`end_date.is.null,end_date.gt.${nowISO}`)
+            .or(`next_scan_at.is.null,next_scan_at.lte.${nowISO}`);
 
         if (error) {
-            throw new Error(`Lỗi khi lấy danh sách chiến dịch đang hoạt động: ${error.message}`);
+            throw new Error(`Lỗi khi lấy danh sách chiến dịch đến hạn: ${error.message}`);
         }
 
-        if (!activeCampaigns || activeCampaigns.length === 0) {
-            const message = "Không có chiến dịch nào đang hoạt động hoặc chưa hết hạn. Bỏ qua.";
-            console.log(message);
-            return new Response(JSON.stringify({ message }), {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200,
-            });
-        }
-
-        // 2. Lọc trong code để tìm các chiến dịch thực sự đến hạn quét
-        const campaignsToRun = activeCampaigns.filter(campaign => {
-            if (!campaign.next_scan_at) {
-                return true; // Chưa từng được lên lịch, chạy ngay.
-            }
-            const nextScanTime = new Date(campaign.next_scan_at);
-            return nextScanTime <= now; // Kiểm tra xem thời gian quét đã đến chưa.
-        });
-
-        if (campaignsToRun.length === 0) {
+        if (!campaignsToRun || campaignsToRun.length === 0) {
             const message = "Kiểm tra hoàn tất. Không có chiến dịch nào đến hạn quét. Bỏ qua.";
             console.log(message);
             return new Response(JSON.stringify({ message }), {
