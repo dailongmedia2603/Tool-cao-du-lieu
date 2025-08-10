@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Play, Pause, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Play, Pause, Pencil, Trash2, ScanLine } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +27,8 @@ interface CampaignListProps {
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
   onViewDetails: (campaign: Campaign) => void;
+  onManualScan: (campaign: Campaign) => void;
+  scanningId: string | null;
 }
 
 const CampaignList = ({
@@ -36,6 +38,8 @@ const CampaignList = ({
   onEdit,
   onDelete,
   onViewDetails,
+  onManualScan,
+  scanningId,
 }: CampaignListProps) => {
   const navigate = useNavigate();
 
@@ -141,6 +145,13 @@ const CampaignList = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => onManualScan(campaign)}
+                        disabled={scanningId === campaign.id}
+                      >
+                        <ScanLine className="mr-2 h-4 w-4" />
+                        <span>{scanningId === campaign.id ? "Đang quét..." : "Quét ngay"}</span>
+                      </DropdownMenuItem>
                       {campaign.status === "active" ? (
                         <DropdownMenuItem
                           onClick={() => onStatusChange(campaign.id, "paused")}

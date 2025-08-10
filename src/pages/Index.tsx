@@ -42,6 +42,7 @@ const Index = () => {
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [facebookGroups, setFacebookGroups] = useState<SelectOption[]>([]);
   const [websiteSources, setWebsiteSources] = useState<SelectOption[]>([]);
+  const [manuallyScanningId, setManuallyScanningId] = useState<string | null>(null);
 
   // Facebook form state
   const [campaignName, setCampaignName] = useState("");
@@ -406,6 +407,58 @@ const Index = () => {
     setViewingCampaign(campaign);
   };
 
+  const handleManualScan = async (campaign: Campaign) => {
+    setManuallyScanningId(campaign.id);
+    const toastId = showLoading(`Đang quét chiến dịch "${campaign.name}"...`);
+
+    const scanPromises = [];
+
+    if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
+        const facebookSources = campaign.sources.filter(s => !s.startsWith('http') && !s.startsWith('www'));
+        if (facebookSources.length > 0) {
+            scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
+                body: { campaign_id: campaign.id },
+            }));
+        }
+    }
+    if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
+        const websiteSources = campaign.sources.filter(s => s.startsWith('http') || s.startsWith('www'));
+        if (websiteSources.length > 0) {
+            scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
+                body: { campaign_id: campaign.id },
+            }));
+        }
+    }
+
+    if (scanPromises.length === 0) {
+        dismissToast(toastId);
+        showError("Chiến dịch này không có nguồn nào để quét.");
+        setManuallyScanningId(null);
+        return;
+    }
+
+    const results = await Promise.allSettled(scanPromises);
+    dismissToast(toastId);
+
+    let allSuccess = true;
+    let messages: string[] = [];
+    results.forEach(result => {
+        if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
+            allSuccess = false;
+            const errorMessage = result.status === 'rejected' ? result.reason.message : result.value.error.message;
+            showError(`Quét thất bại: ${errorMessage}`);
+        } else if (result.status === 'fulfilled' && result.value.data?.message) {
+            messages.push(result.value.data.message);
+        }
+    });
+
+    if (allSuccess) {
+        showSuccess("Quét thủ công hoàn tất! " + messages.join(" "));
+    }
+    
+    setManuallyScanningId(null);
+  };
+
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
   const websiteCampaigns = campaigns.filter(c => c.type === 'Website');
   const combinedCampaigns = campaigns.filter(c => c.type === 'Tổng hợp');
@@ -507,7 +560,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={facebookCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
+          <CampaignList campaigns={facebookCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} onManualScan={handleManualScan} scanningId={manuallyScanningId} />
         </TabsContent>
 
         <TabsContent value="website" className="pt-6">
@@ -576,7 +629,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={websiteCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
+          <CampaignList campaigns={websiteCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} onManualScan={handleManualScan} scanningId={manuallyScanningId} />
         </TabsContent>
 
         <TabsContent value="combined" className="pt-6">
@@ -654,7 +707,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={combinedCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
+          <CampaignList campaigns={combinedCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} onManualScan={handleManualScan} scanningId={manuallyScanningId} />
         </TabsContent>
       </Tabs>
 
