@@ -72,47 +72,45 @@ serve(async (req) => {
         for (const campaign of campaignsToRun) {
             console.log(`Đang xử lý chiến dịch: ${campaign.name} (${campaign.id})`);
 
-            let scanFunctionName = '';
-            if (campaign.type === 'Facebook') {
-                scanFunctionName = 'scan-facebook-campaign';
-            } else {
-                console.log(`Bỏ qua chiến dịch '${campaign.name}' loại '${campaign.type}' vì chưa có chức năng quét.`);
-                const nextScanAt = calculateNextScan(new Date(), campaign.scan_frequency, campaign.scan_unit);
-                 await supabaseAdmin
-                    .from('danh_sach_chien_dich')
-                    .update({ next_scan_at: nextScanAt.toISOString() })
-                    .eq('id', campaign.id);
-                continue;
+            const scanFunctionsToCall = [];
+            if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
+                scanFunctionsToCall.push('scan-facebook-campaign');
+            }
+            if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
+                scanFunctionsToCall.push('scan-website-campaign');
             }
 
-            try {
-                // Gọi hàm quét cụ thể
-                const { error: invokeError } = await supabaseAdmin.functions.invoke(scanFunctionName, {
-                    body: { campaign_id: campaign.id },
-                });
-
-                if (invokeError) {
-                    console.error(`Lỗi khi gọi hàm quét cho chiến dịch ${campaign.id}:`, invokeError.message);
-                } else {
-                    console.log(`Đã gọi hàm quét thành công cho chiến dịch ${campaign.id}.`);
+            if (scanFunctionsToCall.length > 0) {
+                for (const scanFunctionName of scanFunctionsToCall) {
+                    try {
+                        console.log(`Calling ${scanFunctionName} for campaign ${campaign.id}`);
+                        const { error: invokeError } = await supabaseAdmin.functions.invoke(scanFunctionName, {
+                            body: { campaign_id: campaign.id },
+                        });
+                        if (invokeError) {
+                            console.error(`Lỗi khi gọi ${scanFunctionName} cho chiến dịch ${campaign.id}:`, invokeError.message);
+                        } else {
+                            console.log(`Đã gọi ${scanFunctionName} thành công cho chiến dịch ${campaign.id}.`);
+                        }
+                    } catch (e) {
+                        console.error(`Lỗi không mong muốn khi gọi ${scanFunctionName} cho chiến dịch ${campaign.id}:`, e.message);
+                    }
                 }
+            } else {
+                 console.log(`Bỏ qua chiến dịch '${campaign.name}' loại '${campaign.type}' vì chưa có chức năng quét.`);
+            }
 
-            } catch (e) {
-                console.error(`Lỗi không mong muốn khi xử lý chiến dịch ${campaign.id}:`, e.message);
-            } finally {
-                 // Luôn cập nhật thời gian quét tiếp theo để tránh vòng lặp vô hạn khi quét lỗi
-                const nextScanAt = calculateNextScan(new Date(), campaign.scan_frequency, campaign.scan_unit);
+            // Luôn cập nhật thời gian quét tiếp theo để tránh vòng lặp vô hạn khi quét lỗi
+            const nextScanAt = calculateNextScan(new Date(), campaign.scan_frequency, campaign.scan_unit);
+            const { error: updateError } = await supabaseAdmin
+                .from('danh_sach_chien_dich')
+                .update({ next_scan_at: nextScanAt.toISOString() })
+                .eq('id', campaign.id);
 
-                const { error: updateError } = await supabaseAdmin
-                    .from('danh_sach_chien_dich')
-                    .update({ next_scan_at: nextScanAt.toISOString() })
-                    .eq('id', campaign.id);
-
-                if (updateError) {
-                    console.error(`Cập nhật next_scan_at thất bại cho chiến dịch ${campaign.id}:`, updateError.message);
-                } else {
-                    console.log(`Đã cập nhật next_scan_at cho chiến dịch ${campaign.id} thành ${nextScanAt.toISOString()}`);
-                }
+            if (updateError) {
+                console.error(`Cập nhật next_scan_at thất bại cho chiến dịch ${campaign.id}:`, updateError.message);
+            } else {
+                console.log(`Đã cập nhật next_scan_at cho chiến dịch ${campaign.id} thành ${nextScanAt.toISOString()}`);
             }
         }
         

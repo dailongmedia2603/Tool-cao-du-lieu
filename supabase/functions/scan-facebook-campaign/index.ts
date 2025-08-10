@@ -31,6 +31,16 @@ const findKeywords = (content: string, keywords: string[]): string[] => {
     return found;
 };
 
+const logScan = async (supabaseAdmin: any, campaign_id: string, status: string, message: string, details: any = null) => {
+    if (!campaign_id) return;
+    await supabaseAdmin.from('scan_logs').insert({
+        campaign_id,
+        status,
+        message,
+        details
+    });
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -41,19 +51,9 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
   
-  let campaign_id_from_req = null;
+  let campaign_id_from_req: string | null = null;
   let sinceTimestamp: number | null = null;
   let untilTimestamp: number | null = null;
-
-  const logScan = async (campaign_id: string, status: string, message: string, details: any = null) => {
-    if (!campaign_id) return;
-    await supabaseAdmin.from('scan_logs').insert({
-        campaign_id,
-        status,
-        message,
-        details
-    });
-  };
 
   try {
     const { campaign_id } = await req.json();
@@ -76,8 +76,17 @@ serve(async (req) => {
     if (!campaignRes.data) throw new Error("Không tìm thấy chiến dịch.");
     const campaign = campaignRes.data;
 
-    if (campaign.type !== 'Facebook') {
-        return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook." }), {
+    if (campaign.type !== 'Facebook' && campaign.type !== 'Tổng hợp') {
+        return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook hoặc Tổng hợp." }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
+
+    const facebookGroupIds = campaign.sources.filter((s: string) => !s.startsWith('http') && !s.startsWith('www'));
+    if (facebookGroupIds.length === 0) {
+        await logScan(supabaseAdmin, campaign.id, 'success', 'Chiến dịch không có nguồn Facebook nào để quét.', { sources: campaign.sources });
+        return new Response(JSON.stringify({ success: true, message: "Không có nguồn Facebook nào để quét." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
@@ -94,21 +103,26 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
     }
 
-    // Lấy thời gian của BÀI VIẾT cuối cùng đã được lưu
-    const { data: latestPostData, error: latestPostError } = await supabaseAdmin
-        .from('Bao_cao_Facebook')
+    const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Facebook';
+    
+    let latestPostQuery = supabaseAdmin
+        .from(reportTable)
         .select('posted_at')
         .eq('campaign_id', campaign.id)
-        .not('posted_at', 'is', null) // Bỏ qua các bài viết có ngày đăng là null
+        .not('posted_at', 'is', null)
         .order('posted_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-    if (latestPostError && latestPostError.code !== 'PGRST116') { // Bỏ qua lỗi 'không tìm thấy dòng nào'
+    if (campaign.type === 'Tổng hợp') {
+        latestPostQuery = latestPostQuery.eq('source_type', 'Facebook');
+    }
+
+    const { data: latestPostData, error: latestPostError } = await latestPostQuery.single();
+
+    if (latestPostError && latestPostError.code !== 'PGRST116') {
         throw new Error(`Lỗi khi lấy bài viết cuối cùng: ${latestPostError.message}`);
     }
 
-    // Xác định khoảng thời gian quét
     const lastPostTime = latestPostData ? latestPostData.posted_at : null;
     sinceTimestamp = lastPostTime 
         ? toUnixTimestamp(lastPostTime)! + 1 
@@ -120,7 +134,7 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
-    for (const groupId of campaign.sources) {
+    for (const groupId of facebookGroupIds) {
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}`;
         if (sinceTimestamp) {
             url += `&since=${sinceTimestamp}`;
@@ -133,7 +147,7 @@ serve(async (req) => {
         apiCallDetails.push({
             url,
             status: fbResponse.status,
-            response: responseText.substring(0, 2000) // Log first 2000 chars
+            response: responseText.substring(0, 2000)
         });
 
         if (!fbResponse.ok) {
@@ -224,17 +238,21 @@ serve(async (req) => {
     }
 
     if (finalResults.length > 0) {
+        const dataToInsert = campaign.type === 'Tổng hợp' 
+            ? finalResults.map(r => ({ ...r, source_type: 'Facebook' })) 
+            : finalResults;
+
         const { error: insertError } = await supabaseAdmin
-            .from('Bao_cao_Facebook')
-            .insert(finalResults);
+            .from(reportTable)
+            .insert(dataToInsert);
 
         if (insertError) {
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
     }
     
-    const successMessage = `Quét hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
-    await logScan(campaign_id_from_req, 'success', successMessage, { 
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
+    await logScan(supabaseAdmin, campaign_id_from_req, 'success', successMessage, { 
         api_calls: apiCallDetails, 
         found_posts: finalResults.length,
         since: sinceTimestamp,
@@ -247,7 +265,7 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error(error);
-    await logScan(campaign_id_from_req, 'error', error.message, { 
+    await logScan(supabaseAdmin, campaign_id_from_req, 'error', error.message, { 
         stack: error.stack,
         since: sinceTimestamp,
         until: untilTimestamp,
@@ -257,4 +275,4 @@ serve(async (req) => {
       status: 500,
     })
   }
-})
+});

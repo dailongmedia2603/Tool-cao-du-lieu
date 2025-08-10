@@ -237,17 +237,35 @@ const Index = () => {
       resetForm();
       fetchCampaigns();
 
-      if (type === 'Facebook' && newCampaign) {
+      if (newCampaign) {
         const scanToastId = showLoading("Bắt đầu quét dữ liệu lần đầu...");
-        const { data: scanData, error: scanError } = await supabase.functions.invoke('scan-facebook-campaign', {
-          body: { campaign_id: newCampaign.id },
+        const scanPromises = [];
+
+        if (newCampaign.type === 'Facebook' || newCampaign.type === 'Tổng hợp') {
+            scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
+                body: { campaign_id: newCampaign.id },
+            }));
+        }
+        if (newCampaign.type === 'Website' || newCampaign.type === 'Tổng hợp') {
+            scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
+                body: { campaign_id: newCampaign.id },
+            }));
+        }
+
+        const results = await Promise.allSettled(scanPromises);
+        dismissToast(scanToastId);
+
+        let allSuccess = true;
+        results.forEach(result => {
+            if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
+                allSuccess = false;
+                const errorMessage = result.status === 'rejected' ? result.reason.message : result.value.error.message;
+                showError(`Quét lần đầu thất bại: ${errorMessage}`);
+            }
         });
 
-        dismissToast(scanToastId);
-        if (scanError) {
-          showError(`Quét lần đầu thất bại: ${scanError.message}`);
-        } else {
-          showSuccess(scanData.message || "Quét lần đầu hoàn tất! Kiểm tra báo cáo để xem kết quả.");
+        if (allSuccess) {
+            showSuccess("Quét lần đầu hoàn tất! Kiểm tra báo cáo để xem kết quả.");
         }
       }
     }
