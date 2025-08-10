@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
 import * as XLSX from "xlsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ReportData {
   id: string;
@@ -45,6 +46,10 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedAiEvaluations, setSelectedAiEvaluations] = useState<string[]>([]);
   const [selectedSentiments, setSelectedSentiments] = useState<string[]>([]);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -80,6 +85,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
 
   useEffect(() => {
     setFilteredData(reportData);
+    setCurrentPage(1);
     // Reset filters when data changes
     setSelectedKeywords([]);
     setStartDate(undefined);
@@ -126,6 +132,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     }
 
     setFilteredData(data);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
@@ -136,6 +143,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     setSelectedAiEvaluations([]);
     setSelectedSentiments([]);
     setFilteredData(reportData);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
@@ -220,6 +228,17 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     }
   };
 
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, itemsPerPage]);
+
+  const totalPages = useMemo(() => {
+    if (itemsPerPage === -1) return 1;
+    return Math.ceil(filteredData.length / itemsPerPage);
+  }, [filteredData.length, itemsPerPage]);
+
   if (!selectedCampaign) {
     return (
       <Card className="border-orange-200 h-full flex items-center justify-center">
@@ -236,12 +255,12 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
 
   return (
     <>
-      <Card className="border-orange-200 h-full">
+      <Card className="border-orange-200 h-full flex flex-col">
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-xl">{selectedCampaign.name}</CardTitle>
-              <CardDescription>Kết quả quét được từ chiến dịch.</CardDescription>
+              <CardDescription>Kết quả quét được từ chiến dịch. Hiển thị {filteredData.length} kết quả.</CardDescription>
             </div>
             <div className="flex space-x-2">
               <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
@@ -299,8 +318,8 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-auto">
+        <CardContent className="flex-grow flex flex-col">
+          <div className="overflow-auto flex-grow">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -327,10 +346,10 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
-                ) : filteredData.length === 0 ? (
+                ) : paginatedData.length === 0 ? (
                   <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Không có dữ liệu nào phù hợp.</TableCell></TableRow>
                 ) : (
-                  filteredData.map((item) => (
+                  paginatedData.map((item) => (
                     <TableRow key={item.id}>
                       {isFacebookCampaign ? (
                         <>
@@ -374,6 +393,51 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="flex items-center justify-between pt-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+              <span>Hiển thị</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[75px]">
+                  <SelectValue placeholder={itemsPerPage} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value={filteredData.length.toString()}>Tất cả</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span>
+                Trang {currentPage} / {totalPages}
+              </span>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Trước
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Sau
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
