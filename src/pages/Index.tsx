@@ -426,13 +426,6 @@ const Index = () => {
 
   const renderCampaignTab = (type: 'Facebook' | 'Website' | 'Tổng hợp', campaignsToShow: Campaign[], formContent: React.ReactNode) => (
     <>
-      <CampaignToolbar 
-        searchTerm={searchTerm}
-        onSearchTermChange={setSearchTerm}
-        filters={filters}
-        onFiltersChange={setFilters}
-        onScanStatusClick={() => setIsScanStatusOpen(true)}
-      />
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
           <AccordionTrigger className="p-4 bg-gradient-to-r from-brand-orange-light to-white hover:no-underline">
@@ -446,6 +439,13 @@ const Index = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      <CampaignToolbar 
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onScanStatusClick={() => setIsScanStatusOpen(true)}
+      />
       <CampaignList campaigns={campaignsToShow} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} onManualScan={handleManualScan} scanningId={manuallyScanningId} />
     </>
   );

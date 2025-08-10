@@ -57,7 +57,7 @@ const CampaignList = ({
   };
 
   return (
-    <div className="border border-orange-200 rounded-lg bg-white mt-6">
+    <div className="border border-orange-200 rounded-lg bg-white">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50 hover:bg-gray-50">

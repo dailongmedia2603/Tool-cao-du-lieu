@@ -19,7 +19,7 @@ interface CampaignToolbarProps {
 
 const CampaignToolbar = ({ searchTerm, onSearchTermChange, filters, onFiltersChange, onScanStatusClick }: CampaignToolbarProps) => {
   return (
-    <div className="flex items-center justify-between space-x-4 mb-4">
+    <div className="flex items-center justify-between space-x-4 mt-6 mb-4">
       <div className="flex items-center space-x-2 flex-1">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
