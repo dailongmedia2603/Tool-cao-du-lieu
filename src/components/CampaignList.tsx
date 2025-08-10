@@ -28,6 +28,7 @@ export interface Campaign {
   sources: string[];
   scan_frequency: number;
   scan_unit: string;
+  scan_start_date: string | null;
 }
 
 interface CampaignListProps {
@@ -45,6 +46,19 @@ const CampaignList = ({
   onEdit,
   onDelete,
 }: CampaignListProps) => {
+  const getScanUnitText = (unit: string) => {
+    switch (unit) {
+      case "minute":
+        return "Phút";
+      case "hour":
+        return "Giờ";
+      case "day":
+        return "Ngày";
+      default:
+        return unit;
+    }
+  };
+
   return (
     <div className="border border-orange-200 rounded-lg bg-white mt-6">
       <Table>
@@ -53,20 +67,22 @@ const CampaignList = ({
             <TableHead>Tên chiến dịch</TableHead>
             <TableHead>Loại</TableHead>
             <TableHead>Trạng thái</TableHead>
+            <TableHead>Ngày bắt đầu quét</TableHead>
             <TableHead>Ngày kết thúc</TableHead>
+            <TableHead>Tần suất quét</TableHead>
             <TableHead className="text-right">Hành động</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 Đang tải danh sách chiến dịch...
               </TableCell>
             </TableRow>
           ) : campaigns.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+              <TableCell colSpan={7} className="h-24 text-center text-gray-500">
                 Chưa có chiến dịch nào trong mục này.
               </TableCell>
             </TableRow>
@@ -88,9 +104,22 @@ const CampaignList = ({
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  {campaign.scan_start_date
+                    ? format(
+                        new Date(campaign.scan_start_date),
+                        "dd/MM/yyyy HH:mm"
+                      )
+                    : "Bắt đầu ngay"}
+                </TableCell>
+                <TableCell>
                   {campaign.end_date
                     ? format(new Date(campaign.end_date), "dd/MM/yyyy HH:mm")
                     : "Không có"}
+                </TableCell>
+                <TableCell>
+                  {`${campaign.scan_frequency} ${getScanUnitText(
+                    campaign.scan_unit
+                  )}`}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
