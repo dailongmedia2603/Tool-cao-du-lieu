@@ -4,19 +4,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  X,
   Type,
   Calendar,
   Clock,
   Globe,
   Facebook,
-  Key as KeyIcon,
   BrainCircuit,
   FileText,
   CheckCircle,
@@ -106,10 +103,6 @@ export const CampaignDetailsDialog = ({
             </span>
           </DialogTitle>
         </DialogHeader>
-        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-5 w-5 text-brand-orange" />
-          <span className="sr-only">Close</span>
-        </DialogClose>
 
         <ScrollArea className="max-h-[70vh]">
           <div className="px-6 pb-6 space-y-6">
