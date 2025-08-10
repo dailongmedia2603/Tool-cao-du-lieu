@@ -42,13 +42,11 @@ serve(async (req) => {
       throw new Error("Campaign ID is required.");
     }
 
-    // Use the SERVICE_ROLE_KEY for admin-level access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Fetch API keys and campaign details in parallel
     const [apiKeyRes, campaignRes] = await Promise.all([
         supabaseAdmin.from('luu_api_key').select('*').eq('id', 1).single(),
         supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
@@ -83,7 +81,6 @@ serve(async (req) => {
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
     const allPostsData = [];
 
-    // 2. Fetch data from Facebook API for each group
     for (const groupId of campaign.sources) {
         const since = toUnixTimestamp(campaign.scan_start_date);
         const until = Math.floor(Date.now() / 1000);
@@ -96,17 +93,21 @@ serve(async (req) => {
 
         const fbResponse = await fetch(url);
         if (!fbResponse.ok) {
-            console.error(`Error fetching data for group ${groupId}: ${await fbResponse.text()}`);
-            continue; // Skip to next group on error
+            console.error(`Proxy server returned non-OK status for group ${groupId}: ${fbResponse.status} ${await fbResponse.text()}`);
+            continue;
         }
-        const fbData = await fbResponse.json();
+        
+        const proxyResponse = await fbResponse.json();
 
-        if (fbData.data) {
-            allPostsData.push(...fbData.data.map((post: any) => ({ ...post, campaign_id: campaign.id })));
+        if (proxyResponse.success && proxyResponse.data && proxyResponse.data.data) {
+            const posts = proxyResponse.data.data;
+            allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
+        } else {
+            const errorMessage = proxyResponse.message || `Proxy returned success=false or malformed data for group ${groupId}`;
+            console.error(errorMessage, JSON.stringify(proxyResponse));
         }
     }
 
-    // 3. Filter posts by keywords
     let filteredPosts = [];
     if (keywords.length > 0) {
         for (const post of allPostsData) {
@@ -116,11 +117,9 @@ serve(async (req) => {
             }
         }
     } else {
-        // If no keywords, process all posts
         filteredPosts = allPostsData.map(post => ({ ...post, keywords_found: [] }));
     }
 
-    // 4. Process with AI if enabled
     let finalResults = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_api_key && gemini_model) {
         const genAI = new GoogleGenerativeAI(gemini_api_key);
@@ -157,7 +156,6 @@ serve(async (req) => {
 
             } catch (e) {
                 console.error("Error processing with AI for post:", post.id, e);
-                // Add post without AI data if AI fails
                 finalResults.push({
                     campaign_id: campaign.id,
                     content: post.message,
@@ -170,7 +168,6 @@ serve(async (req) => {
             }
         }
     } else {
-        // If AI is not enabled, just format the data
         finalResults = filteredPosts.map(post => ({
             campaign_id: campaign.id,
             content: post.message,
@@ -182,7 +179,6 @@ serve(async (req) => {
         }));
     }
 
-    // 5. Insert results into the database
     if (finalResults.length > 0) {
         const { error: insertError } = await supabaseAdmin
             .from('Bao_cao_Facebook')
