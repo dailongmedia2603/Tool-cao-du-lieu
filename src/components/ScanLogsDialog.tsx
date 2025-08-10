@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, Clock, Code } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ScanLog {
@@ -36,7 +36,7 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
             Lịch sử quét
           </DialogTitle>
           <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <XCircle className="h-6 w-6 text-brand-orange" />
+            <X className="h-6 w-6 text-brand-orange" />
             <span className="sr-only">Close</span>
           </DialogClose>
         </DialogHeader>
