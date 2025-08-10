@@ -39,7 +39,7 @@ serve(async (req) => {
   try {
     const { campaign_id } = await req.json();
     if (!campaign_id) {
-      throw new Error("Campaign ID is required.");
+      throw new Error("Cần có ID chiến dịch.");
     }
 
     const supabaseAdmin = createClient(
@@ -52,16 +52,16 @@ serve(async (req) => {
         supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
     ]);
 
-    if (apiKeyRes.error) throw new Error(`Failed to fetch API keys: ${apiKeyRes.error.message}`);
-    if (!apiKeyRes.data) throw new Error("API key configuration not found.");
+    if (apiKeyRes.error) throw new Error(`Lấy API key thất bại: ${apiKeyRes.error.message}`);
+    if (!apiKeyRes.data) throw new Error("Không tìm thấy cấu hình API key.");
     const apiKeys = apiKeyRes.data;
 
-    if (campaignRes.error) throw new Error(`Failed to fetch campaign: ${campaignRes.error.message}`);
-    if (!campaignRes.data) throw new Error("Campaign not found.");
+    if (campaignRes.error) throw new Error(`Lấy chiến dịch thất bại: ${campaignRes.error.message}`);
+    if (!campaignRes.data) throw new Error("Không tìm thấy chiến dịch.");
     const campaign = campaignRes.data;
 
     if (campaign.type !== 'Facebook') {
-        return new Response(JSON.stringify({ message: "Scan is only for Facebook campaigns." }), {
+        return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
@@ -75,7 +75,7 @@ serve(async (req) => {
     } = apiKeys;
 
     if (!facebook_api_url || !facebook_api_token) {
-        throw new Error("Facebook API URL or Token is not configured in settings.");
+        throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
     }
 
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
@@ -162,7 +162,7 @@ serve(async (req) => {
                     posted_at: post.created_time,
                     source_url: post.permalink_url,
                     keywords_found: post.keywords_found,
-                    ai_evaluation: 'AI processing failed.',
+                    ai_evaluation: 'Xử lý bằng AI thất bại.',
                     sentiment: null,
                 });
             }
@@ -185,11 +185,11 @@ serve(async (req) => {
             .insert(finalResults);
 
         if (insertError) {
-            throw new Error(`Failed to insert report data: ${insertError.message}`);
+            throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
     }
 
-    return new Response(JSON.stringify({ success: true, message: `Scan complete. Found and processed ${finalResults.length} posts.` }), {
+    return new Response(JSON.stringify({ success: true, message: `Quét hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

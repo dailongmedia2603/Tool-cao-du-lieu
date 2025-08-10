@@ -20,11 +20,13 @@ const App = () => (
       <Toaster />
       <Sonner
         position="bottom-right"
+        closeButton
         toastOptions={{
           classNames: {
             success: "bg-brand-orange-light text-brand-orange border-orange-200",
             error: "bg-red-100 text-red-600 border-red-200",
             loading: "bg-brand-orange-light text-brand-orange border-orange-200",
+            closeButton: "text-brand-orange hover:text-brand-orange/80",
           },
         }}
       />
