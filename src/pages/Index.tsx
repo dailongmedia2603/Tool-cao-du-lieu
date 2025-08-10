@@ -213,7 +213,8 @@ const Index = () => {
       ...payload
     };
 
-    const { error } = await supabase.from('campaigns').insert(finalPayload);
+    const { data: newCampaign, error } = await supabase.from('campaigns').insert(finalPayload).select().single();
+    
     dismissToast(toastId);
     if (error) {
       showError(`Tạo chiến dịch thất bại: ${error.message}`);
@@ -221,6 +222,20 @@ const Index = () => {
       showSuccess("Chiến dịch đã được tạo thành công!");
       resetForm();
       fetchCampaigns();
+
+      if (type === 'Facebook' && newCampaign) {
+        const scanToastId = showLoading("Bắt đầu quét dữ liệu lần đầu...");
+        const { data: scanData, error: scanError } = await supabase.functions.invoke('scan-facebook-campaign', {
+          body: { campaign_id: newCampaign.id },
+        });
+
+        dismissToast(scanToastId);
+        if (scanError) {
+          showError(`Quét lần đầu thất bại: ${scanError.message}`);
+        } else {
+          showSuccess(scanData.message || "Quét lần đầu hoàn tất! Kiểm tra báo cáo để xem kết quả.");
+        }
+      }
     }
     setIsCreatingState(false);
   };
