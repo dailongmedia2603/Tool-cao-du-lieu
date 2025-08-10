@@ -77,8 +77,10 @@ export function MultiSelectCombobox({
                   className="bg-brand-orange-light text-brand-orange border border-orange-200 hover:bg-orange-200"
                   onClick={(e) => handleUnselect(e, option.value)}
                 >
-                  {option.label}
-                  <X className="ml-1 h-3 w-3 cursor-pointer" />
+                  <span className="truncate max-w-[180px]" title={option.label}>
+                    {option.label}
+                  </span>
+                  <X className="ml-1 h-3 w-3 cursor-pointer shrink-0" />
                 </Badge>
               ))
             ) : (
