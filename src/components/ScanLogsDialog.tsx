@@ -62,15 +62,15 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
                           <div className="text-left">
                             <p className="font-semibold text-gray-800">{log.message}</p>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
-                              <p className="flex items-center">
+                              <span className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1.5" />
                                 {format(new Date(log.scan_time), "dd/MM/yyyy, HH:mm:ss")}
-                              </p>
+                              </span>
                               {log.details?.since && log.details?.until && (
-                                <p className="flex items-center">
+                                <span className="flex items-center border-l border-gray-300 pl-4">
                                   <CalendarRange className="h-3 w-3 mr-1.5" />
                                   {`Từ ${formatTimestamp(log.details.since)} đến ${formatTimestamp(log.details.until)}`}
-                                </p>
+                                </span>
                               )}
                             </div>
                           </div>
