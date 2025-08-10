@@ -99,6 +99,7 @@ serve(async (req) => {
         .from('Bao_cao_Facebook')
         .select('posted_at')
         .eq('campaign_id', campaign.id)
+        .not('posted_at', 'is', null) // Bỏ qua các bài viết có ngày đăng là null
         .order('posted_at', { ascending: false })
         .limit(1)
         .single();
