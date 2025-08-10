@@ -43,13 +43,13 @@ serve(async (req) => {
 
         const now = new Date().toISOString();
 
-        // Lấy tất cả các chiến dịch đang hoạt động, đã đến hạn quét
+        // Lấy tất cả các chiến dịch đang hoạt động, đã đến hạn quét (hoặc chưa từng được quét)
         // và chưa qua ngày kết thúc
         const { data: campaigns, error } = await supabaseAdmin
             .from('danh_sach_chien_dich')
             .select('*')
             .eq('status', 'active')
-            .lte('next_scan_at', now)
+            .or(`next_scan_at.is.null,next_scan_at.lte.${now}`) // Sửa lỗi ở đây
             .or(`end_date.is.null,end_date.gt.${now}`);
 
         if (error) {
