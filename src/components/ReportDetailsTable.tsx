@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from './ui/separator';
+import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 
 interface ReportData {
   id: string;
@@ -306,7 +307,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">
-                    <Checkbox checked={isAllOnPageSelected} onCheckedChange={(c) => handleSelectAll(c as boolean)} aria-label="Select all" disabled={paginatedData.length === 0} />
+                    <Checkbox checked={isAllOnPageSelected} onCheckedChange={(c) => handleSelectAll(c as boolean)} disabled={paginatedData.length === 0} />
                   </TableHead>
                   {renderTableHeaders()}
                 </TableRow>
@@ -352,65 +353,73 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
         </CardContent>
       </Card>
 
-      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-          <DialogHeader>
-            <DialogTitle>{selectedItemDetails?.title || 'Chi tiết bài viết'}</DialogTitle>
-            <DialogDescription>
-              Thông tin chi tiết được trích xuất từ nguồn.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedItemDetails && (
-            <div className="py-4 max-h-[60vh] overflow-y-auto space-y-6 pr-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <DetailItem icon={Tag} label="Giá">
-                  <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.price}</Badge>
-                </DetailItem>
-                <DetailItem icon={Scaling} label="Diện tích">
-                  <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.area}</Badge>
-                </DetailItem>
-                <DetailItem icon={MapPin} label="Địa chỉ / Khu vực">
-                  {selectedItemDetails.address}
-                </DetailItem>
-                <DetailItem icon={CalendarDays} label="Ngày đăng">
-                  {selectedItemDetails.posted_date_string || (selectedItemDetails.posted_at ? format(new Date(selectedItemDetails.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A')}
-                </DetailItem>
+      {isFacebookCampaign ? (
+        <FacebookReportDetailsDialog
+          isOpen={isDetailsModalOpen}
+          onOpenChange={setIsDetailsModalOpen}
+          item={selectedItemDetails}
+        />
+      ) : (
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+            <DialogHeader>
+              <DialogTitle>{selectedItemDetails?.title || 'Chi tiết bài viết'}</DialogTitle>
+              <DialogDescription>
+                Thông tin chi tiết được trích xuất từ nguồn.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedItemDetails && (
+              <div className="py-4 max-h-[60vh] overflow-y-auto space-y-6 pr-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <DetailItem icon={Tag} label="Giá">
+                    <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.price}</Badge>
+                  </DetailItem>
+                  <DetailItem icon={Scaling} label="Diện tích">
+                    <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.area}</Badge>
+                  </DetailItem>
+                  <DetailItem icon={MapPin} label="Địa chỉ / Khu vực">
+                    {selectedItemDetails.address}
+                  </DetailItem>
+                  <DetailItem icon={CalendarDays} label="Ngày đăng">
+                    {selectedItemDetails.posted_date_string || (selectedItemDetails.posted_at ? format(new Date(selectedItemDetails.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A')}
+                  </DetailItem>
+                </div>
+                
+                {selectedItemDetails.description && (
+                  <div>
+                    <Separator className="my-4" />
+                    <DetailItem icon={FileText} label="Nội dung chi tiết">
+                      <p className="whitespace-pre-wrap text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">
+                        {selectedItemDetails.description}
+                      </p>
+                    </DetailItem>
+                  </div>
+                )}
+
+                {selectedItemDetails.keywords_found && selectedItemDetails.keywords_found.length > 0 && (
+                   <div>
+                    <Separator className="my-4" />
+                    <DetailItem icon={Tags} label="Từ khóa được tìm thấy">
+                       <div className="flex flex-wrap gap-2">
+                        {selectedItemDetails.keywords_found.map((kw, i) => <Badge key={i}>{kw}</Badge>)}
+                      </div>
+                    </DetailItem>
+                  </div>
+                )}
+
+                {selectedItemDetails.ai_evaluation && (
+                   <div>
+                    <Separator className="my-4" />
+                    <DetailItem icon={BrainCircuit} label="AI Đánh giá">
+                      <p className="text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">{selectedItemDetails.ai_evaluation}</p>
+                    </DetailItem>
+                  </div>
+                )}
               </div>
-              
-              {selectedItemDetails.description && (
-                <div>
-                  <Separator className="my-4" />
-                  <DetailItem icon={FileText} label="Nội dung chi tiết">
-                    <p className="whitespace-pre-wrap text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">
-                      {selectedItemDetails.description}
-                    </p>
-                  </DetailItem>
-                </div>
-              )}
-
-              {selectedItemDetails.keywords_found && selectedItemDetails.keywords_found.length > 0 && (
-                 <div>
-                  <Separator className="my-4" />
-                  <DetailItem icon={Tags} label="Từ khóa được tìm thấy">
-                     <div className="flex flex-wrap gap-2">
-                      {selectedItemDetails.keywords_found.map((kw, i) => <Badge key={i}>{kw}</Badge>)}
-                    </div>
-                  </DetailItem>
-                </div>
-              )}
-
-              {selectedItemDetails.ai_evaluation && (
-                 <div>
-                  <Separator className="my-4" />
-                  <DetailItem icon={BrainCircuit} label="AI Đánh giá">
-                    <p className="text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">{selectedItemDetails.ai_evaluation}</p>
-                  </DetailItem>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <ScanLogsDialog isOpen={isLogsOpen} onOpenChange={setIsLogsOpen} logs={scanLogs} loading={loadingLogs} />
 
