@@ -26,9 +26,10 @@ interface CampaignScanStatus {
 interface ScanStatusPopupProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  activeTab: string;
 }
 
-const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
+const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupProps) => {
   const [scanStatuses, setScanStatuses] = useState<CampaignScanStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,12 +38,40 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
 
     const fetchInitialData = async () => {
       setLoading(true);
+
+      const campaignTypeMap: { [key: string]: string } = {
+        facebook: 'Facebook',
+        website: 'Website',
+        combined: 'Tổng hợp'
+      };
+      const currentCampaignType = campaignTypeMap[activeTab];
+
+      const { data: campaignsData, error: campaignError } = await supabase
+        .from('danh_sach_chien_dich')
+        .select('id, name')
+        .eq('type', currentCampaignType);
+
+      if (campaignError) {
+        console.error("Error fetching campaigns for tab:", campaignError);
+        setLoading(false);
+        return;
+      }
+      
+      if (!campaignsData || campaignsData.length === 0) {
+        setScanStatuses([]);
+        setLoading(false);
+        return;
+      }
+
+      const campaignIds = campaignsData.map(c => c.id);
+      const campaignMap = new Map(campaignsData.map(c => [c.id, c.name]));
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data: recentLogsData, error: logError } = await supabase
         .from('scan_logs')
         .select('*')
         .gte('scan_time', twentyFourHoursAgo)
+        .in('campaign_id', campaignIds)
         .order('scan_time', { ascending: false });
 
       if (logError) {
@@ -52,27 +81,6 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
       }
 
       const recentLogs: ScanLog[] = recentLogsData || [];
-
-      const campaignIds = [...new Set(recentLogs.map(log => log.campaign_id))];
-      if (campaignIds.length === 0) {
-        setScanStatuses([]);
-        setLoading(false);
-        return;
-      }
-      
-      const { data: campaignsData, error: campaignError } = await supabase
-        .from('danh_sach_chien_dich')
-        .select('id, name')
-        .in('id', campaignIds);
-
-      if (campaignError) {
-        console.error("Error fetching campaign names:", campaignError);
-        setLoading(false);
-        return;
-      }
-
-      const campaigns = campaignsData || [];
-      const campaignMap = new Map(campaigns.map(c => [c.id, c.name]));
 
       const groupedLogs = recentLogs.reduce((acc, log) => {
         if (!acc[log.campaign_id]) {
@@ -106,7 +114,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
 
     const channel = supabase.channel('scan-status-popup')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload) => {
-        fetchInitialData(); // Refetch all on new log to keep it simple and robust
+        fetchInitialData();
       })
       .subscribe();
 
@@ -114,7 +122,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
       supabase.removeChannel(channel);
     };
 
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

@@ -8,7 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, Clock, Code, CalendarRange, Info } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code, CalendarRange, Info, Facebook, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ScanLog {
@@ -17,6 +17,7 @@ export interface ScanLog {
   status: 'success' | 'error' | 'info';
   message: string;
   details: any;
+  source_type: string | null;
 }
 
 interface ScanLogsDialogProps {
@@ -30,6 +31,25 @@ const formatTimestamp = (timestamp: number | null | undefined) => {
   if (!timestamp) return 'N/A';
   // Timestamp is in seconds, convert to milliseconds for Date object
   return format(new Date(timestamp * 1000), "HH:mm dd/MM/yyyy");
+};
+
+const SourceBadge = ({ sourceType }: { sourceType: string | null }) => {
+  if (!sourceType) return null;
+
+  const isFacebook = sourceType.toLowerCase().includes('facebook');
+  const isWebsite = sourceType.toLowerCase().includes('website');
+
+  return (
+    <Badge variant="outline" className={cn(
+      "border-gray-300",
+      isFacebook && "border-blue-200 bg-blue-50 text-blue-700",
+      isWebsite && "border-green-200 bg-green-50 text-green-700",
+    )}>
+      {isFacebook && <Facebook className="h-3 w-3 mr-1.5" />}
+      {isWebsite && <Globe className="h-3 w-3 mr-1.5" />}
+      {sourceType}
+    </Badge>
+  );
 };
 
 export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogsDialogProps) => {
@@ -68,6 +88,7 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
                                 <Clock className="h-3 w-3 mr-1.5" />
                                 {format(new Date(log.scan_time), "dd/MM/yyyy, HH:mm:ss")}
                               </span>
+                              <SourceBadge sourceType={log.source_type} />
                               {log.details?.since && log.details?.until && (
                                 <span className="flex items-center border-l border-gray-300 pl-4">
                                   <CalendarRange className="h-3 w-3 mr-1.5" />

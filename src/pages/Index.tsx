@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlusCircle } from "lucide-react";
-import { ScanLog } from "@/components/ScanLogsDialog";
 import CampaignToolbar, { CampaignFilters } from "@/components/CampaignToolbar";
 import ScanStatusPopup from "@/components/ScanStatusPopup";
 
@@ -49,6 +48,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<CampaignFilters>({ status: 'all' });
   const [isScanStatusOpen, setIsScanStatusOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("facebook");
 
   // Facebook form state
   const [campaignName, setCampaignName] = useState("");
@@ -457,7 +457,7 @@ const Index = () => {
         <p className="text-gray-500 mt-1">Tạo và quản lý các chiến dịch của bạn tại đây.</p>
       </div>
 
-      <Tabs defaultValue="facebook" className="w-full">
+      <Tabs defaultValue="facebook" className="w-full" onValueChange={(value) => setActiveTab(value)}>
         <TabsList className="inline-flex items-center justify-center rounded-lg border border-orange-200 p-1 bg-white">
           <TabsTrigger value="facebook" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Facebook</TabsTrigger>
           <TabsTrigger value="website" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Website</TabsTrigger>
@@ -731,7 +731,7 @@ const Index = () => {
         }}
       />
       
-      <ScanStatusPopup isOpen={isScanStatusOpen} onOpenChange={setIsScanStatusOpen} />
+      <ScanStatusPopup isOpen={isScanStatusOpen} onOpenChange={setIsScanStatusOpen} activeTab={activeTab} />
     </div>
   );
 };
