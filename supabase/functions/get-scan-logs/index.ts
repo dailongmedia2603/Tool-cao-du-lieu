@@ -32,6 +32,7 @@ serve(async (req) => {
       .from('scan_logs')
       .select('*')
       .eq('campaign_id', campaign_id)
+      .eq('log_type', 'final')
       .order('scan_time', { ascending: false });
 
     if (error) {
