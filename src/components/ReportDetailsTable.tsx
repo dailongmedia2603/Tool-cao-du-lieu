@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ExternalLink, Download, Filter, FileText } from 'lucide-react';
 import { showError } from '@/utils/toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ReportData {
   id: string;
@@ -28,6 +29,8 @@ interface ReportDetailsTableProps {
 const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -60,6 +63,13 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     fetchReportData();
   }, [selectedCampaign]);
 
+  const handleViewContent = (content: string | null) => {
+    if (content) {
+      setSelectedContent(content);
+      setIsContentModalOpen(true);
+    }
+  };
+
   const getSentimentBadge = (sentiment: ReportData['sentiment']) => {
     switch (sentiment) {
       case 'positive':
@@ -88,97 +98,110 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const isFacebookCampaign = selectedCampaign.type === 'Facebook';
 
   return (
-    <Card className="border-orange-200 h-full">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl">{selectedCampaign.name}</CardTitle>
-            <CardDescription>Kết quả quét được từ chiến dịch.</CardDescription>
+    <>
+      <Card className="border-orange-200 h-full">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-xl">{selectedCampaign.name}</CardTitle>
+              <CardDescription>Kết quả quét được từ chiến dịch.</CardDescription>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Lọc</Button>
+              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
+            </div>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Lọc</Button>
-            <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {isFacebookCampaign ? (
-                  <>
-                    <TableHead>Nội dung bài viết</TableHead>
-                    <TableHead>Thời gian đăng</TableHead>
-                    <TableHead>Từ khoá</TableHead>
-                    <TableHead>AI đánh giá</TableHead>
-                    <TableHead>Cảm xúc</TableHead>
-                    <TableHead className="text-right">Hành động</TableHead>
-                  </>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {isFacebookCampaign ? (
+                    <>
+                      <TableHead>Nội dung bài viết</TableHead>
+                      <TableHead>Thời gian đăng</TableHead>
+                      <TableHead>Từ khoá</TableHead>
+                      <TableHead>AI đánh giá</TableHead>
+                      <TableHead>Cảm xúc</TableHead>
+                      <TableHead className="text-right">Hành động</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead>Nội dung</TableHead>
+                      <TableHead>Tác giả</TableHead>
+                      <TableHead>Thời gian</TableHead>
+                      <TableHead>Cảm xúc</TableHead>
+                      <TableHead className="text-right">Hành động</TableHead>
+                    </>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
+                ) : reportData.length === 0 ? (
+                  <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Không có dữ liệu cho chiến dịch này.</TableCell></TableRow>
                 ) : (
-                  <>
-                    <TableHead>Nội dung</TableHead>
-                    <TableHead>Tác giả</TableHead>
-                    <TableHead>Thời gian</TableHead>
-                    <TableHead>Cảm xúc</TableHead>
-                    <TableHead className="text-right">Hành động</TableHead>
-                  </>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
-              ) : reportData.length === 0 ? (
-                <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Không có dữ liệu cho chiến dịch này.</TableCell></TableRow>
-              ) : (
-                reportData.map((item) => (
-                  <TableRow key={item.id}>
-                    {isFacebookCampaign ? (
-                      <>
-                        <TableCell className="max-w-md truncate">{item.content}</TableCell>
-                        <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                        <TableCell>
-                          {item.keywords_found && item.keywords_found.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {item.keywords_found.map((keyword, index) => (
-                                <Badge key={index} variant="secondary">{keyword}</Badge>
-                              ))}
-                            </div>
-                          ) : 'N/A'}
-                        </TableCell>
-                        <TableCell>{item.ai_evaluation || 'N/A'}</TableCell>
-                        <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
-                      </>
-                    ) : (
-                      <>
-                        <TableCell className="max-w-sm truncate">{item.content}</TableCell>
-                        <TableCell>{item.author || 'N/A'}</TableCell>
-                        <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                        <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
-                      </>
-                    )}
-                    <TableCell className="text-right">
-                      {item.source_url ? (
-                        <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-                          <a href={item.source_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
+                  reportData.map((item) => (
+                    <TableRow key={item.id}>
+                      {isFacebookCampaign ? (
+                        <>
+                          <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewContent(item.content)}>{item.content}</TableCell>
+                          <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                          <TableCell>
+                            {item.keywords_found && item.keywords_found.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {item.keywords_found.map((keyword, index) => (
+                                  <Badge key={index} variant="secondary">{keyword}</Badge>
+                                ))}
+                              </div>
+                            ) : 'N/A'}
+                          </TableCell>
+                          <TableCell>{item.ai_evaluation || 'N/A'}</TableCell>
+                          <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
+                        </>
                       ) : (
-                         <Button variant="ghost" size="icon" disabled>
-                            <ExternalLink className="h-4 w-4 text-gray-300" />
-                         </Button>
+                        <>
+                          <TableCell className="max-w-sm truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewContent(item.content)}>{item.content}</TableCell>
+                          <TableCell>{item.author || 'N/A'}</TableCell>
+                          <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                          <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
+                        </>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+                      <TableCell className="text-right">
+                        {item.source_url ? (
+                          <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
+                            <a href={item.source_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        ) : (
+                           <Button variant="ghost" size="icon" disabled>
+                              <ExternalLink className="h-4 w-4 text-gray-300" />
+                           </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isContentModalOpen} onOpenChange={setIsContentModalOpen}>
+        <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+          <DialogHeader>
+            <DialogTitle>Nội dung chi tiết</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[60vh] overflow-y-auto">
+            <p className="whitespace-pre-wrap text-gray-800">{selectedContent}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
