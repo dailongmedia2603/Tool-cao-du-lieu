@@ -7,7 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ExternalLink, Download, Filter, FileText, History, Trash2, Eye } from 'lucide-react';
+import { 
+  ExternalLink, Download, FileText, History, Trash2, Eye, 
+  Tag, Scaling, MapPin, CalendarDays, Tags, BrainCircuit 
+} from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import * as XLSX from "xlsx";
@@ -15,6 +18,7 @@ import { ScanLogsDialog, ScanLog } from "@/components/ScanLogsDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from './ui/separator';
 
 interface ReportData {
   id: string;
@@ -39,11 +43,24 @@ interface ReportDetailsTableProps {
   selectedCampaign: Campaign | null;
 }
 
+const DetailItem = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) => {
+  if (!children) return null;
+  return (
+    <div className="flex items-start space-x-3">
+      <Icon className="h-5 w-5 text-brand-orange flex-shrink-0 mt-1" />
+      <div>
+        <p className="text-sm font-medium text-gray-500">{label}</p>
+        <div className="text-base text-gray-800">{children}</div>
+      </div>
+    </div>
+  );
+};
+
 const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<{title: string, content: string | null}>({title: '', content: null});
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedItemDetails, setSelectedItemDetails] = useState<ReportData | null>(null);
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -98,9 +115,9 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     return reportData.slice(startIndex, endIndex);
   }, [reportData, currentPage, itemsPerPage]);
 
-  const handleViewContent = (title: string | null, content: string | null) => {
-    setSelectedContent({ title: title || "Chi tiết", content });
-    setIsContentModalOpen(true);
+  const handleViewDetails = (item: ReportData) => {
+    setSelectedItemDetails(item);
+    setIsDetailsModalOpen(true);
   };
 
   const handleExportToExcel = () => {
@@ -227,7 +244,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     if (isFacebookCampaign) {
       return (
         <>
-          <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewContent('Nội dung chi tiết', item.description)}>{item.description}</TableCell>
+          <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>{item.description}</TableCell>
           <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
           <TableCell>
             {item.keywords_found && item.keywords_found.length > 0 ? (
@@ -251,7 +268,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
         <TableCell className="max-w-xs truncate">{item.address}</TableCell>
         <TableCell>{item.posted_date_string}</TableCell>
         <TableCell className="text-right space-x-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewContent(item.title, item.description)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDetails(item)}>
             <Eye className="h-4 w-4 text-gray-600" />
           </Button>
           <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
@@ -335,15 +352,63 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
         </CardContent>
       </Card>
 
-      <Dialog open={isContentModalOpen} onOpenChange={setIsContentModalOpen}>
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
         <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
           <DialogHeader>
-            <DialogTitle>{selectedContent.title}</DialogTitle>
-            <DialogDescription>Nội dung chi tiết của tin đăng.</DialogDescription>
+            <DialogTitle>{selectedItemDetails?.title || 'Chi tiết bài viết'}</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết được trích xuất từ nguồn.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-4 max-h-[60vh] overflow-y-auto">
-            <p className="whitespace-pre-wrap text-gray-800">{selectedContent.content}</p>
-          </div>
+          {selectedItemDetails && (
+            <div className="py-4 max-h-[60vh] overflow-y-auto space-y-6 pr-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DetailItem icon={Tag} label="Giá">
+                  <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.price}</Badge>
+                </DetailItem>
+                <DetailItem icon={Scaling} label="Diện tích">
+                  <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.area}</Badge>
+                </DetailItem>
+                <DetailItem icon={MapPin} label="Địa chỉ / Khu vực">
+                  {selectedItemDetails.address}
+                </DetailItem>
+                <DetailItem icon={CalendarDays} label="Ngày đăng">
+                  {selectedItemDetails.posted_date_string || (selectedItemDetails.posted_at ? format(new Date(selectedItemDetails.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A')}
+                </DetailItem>
+              </div>
+              
+              {selectedItemDetails.description && (
+                <div>
+                  <Separator className="my-4" />
+                  <DetailItem icon={FileText} label="Nội dung chi tiết">
+                    <p className="whitespace-pre-wrap text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">
+                      {selectedItemDetails.description}
+                    </p>
+                  </DetailItem>
+                </div>
+              )}
+
+              {selectedItemDetails.keywords_found && selectedItemDetails.keywords_found.length > 0 && (
+                 <div>
+                  <Separator className="my-4" />
+                  <DetailItem icon={Tags} label="Từ khóa được tìm thấy">
+                     <div className="flex flex-wrap gap-2">
+                      {selectedItemDetails.keywords_found.map((kw, i) => <Badge key={i}>{kw}</Badge>)}
+                    </div>
+                  </DetailItem>
+                </div>
+              )}
+
+              {selectedItemDetails.ai_evaluation && (
+                 <div>
+                  <Separator className="my-4" />
+                  <DetailItem icon={BrainCircuit} label="AI Đánh giá">
+                    <p className="text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">{selectedItemDetails.ai_evaluation}</p>
+                  </DetailItem>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
