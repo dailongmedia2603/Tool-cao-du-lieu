@@ -8,13 +8,14 @@ import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ExternalLink, Download, Filter, FileText } from 'lucide-react';
+import { showError } from '@/utils/toast';
 
 interface ReportData {
   id: string;
-  content: string;
-  source_url: string;
-  author: string;
-  posted_at: string;
+  content: string | null;
+  source_url: string | null;
+  author?: string | null;
+  posted_at: string | null;
   sentiment: 'positive' | 'negative' | 'neutral' | null;
   keywords_found?: string[] | null;
   ai_evaluation?: string | null;
@@ -36,18 +37,37 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
       }
       setLoading(true);
       
-      // NOTE: Using mock data for demonstration.
-      const mockData: ReportData[] = [
-        { id: '1', content: 'Sản phẩm này thật tuyệt vời, rất đáng tiền!', source_url: 'https://facebook.com/post/1', author: 'Nguyễn Văn A', posted_at: new Date().toISOString(), sentiment: 'positive', keywords_found: ['sản phẩm', 'tuyệt vời'], ai_evaluation: 'Phù hợp' },
-        { id: '2', content: 'Chất lượng dịch vụ quá tệ, không bao giờ quay lại.', source_url: 'https://facebook.com/post/2', author: 'Trần Thị B', posted_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(), sentiment: 'negative', keywords_found: ['dịch vụ', 'tệ'], ai_evaluation: 'Phù hợp' },
-        { id: '3', content: 'Giá hơi cao nhưng chấp nhận được.', source_url: 'https://example.com/review/3', author: 'Lê Văn C', posted_at: new Date(Date.now() - 3600 * 1000 * 48).toISOString(), sentiment: 'neutral', keywords_found: ['giá'], ai_evaluation: 'Không phù hợp' },
-        { id: '4', content: 'Hôm nay cửa hàng có mở cửa không?', source_url: 'https://facebook.com/post/4', author: 'Phạm D', posted_at: new Date(Date.now() - 3600 * 1000 * 72).toISOString(), sentiment: null, keywords_found: null, ai_evaluation: 'Không phù hợp' },
-      ];
+      let tableName = '';
+      switch (selectedCampaign.type) {
+        case 'Facebook':
+          tableName = 'Bao_cao_Facebook';
+          break;
+        case 'Website':
+          tableName = 'Bao_cao_Website';
+          break;
+        case 'Tổng hợp':
+          tableName = 'Bao_cao_tong_hop';
+          break;
+        default:
+          setReportData([]);
+          setLoading(false);
+          return;
+      }
+
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('campaign_id', selectedCampaign.id)
+        .order('posted_at', { ascending: false });
+
+      if (error) {
+        showError(`Không thể tải dữ liệu báo cáo: ${error.message}`);
+        setReportData([]);
+      } else {
+        setReportData(data as ReportData[]);
+      }
       
-      setTimeout(() => {
-        setReportData(mockData);
-        setLoading(false);
-      }, 1000);
+      setLoading(false);
     };
 
     fetchReportData();
@@ -130,7 +150,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
                     {isFacebookCampaign ? (
                       <>
                         <TableCell className="max-w-md truncate">{item.content}</TableCell>
-                        <TableCell>{format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                        <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                         <TableCell>
                           {item.keywords_found && item.keywords_found.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
@@ -146,17 +166,23 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
                     ) : (
                       <>
                         <TableCell className="max-w-sm truncate">{item.content}</TableCell>
-                        <TableCell>{item.author}</TableCell>
-                        <TableCell>{format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                        <TableCell>{item.author || 'N/A'}</TableCell>
+                        <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                         <TableCell>{getSentimentBadge(item.sentiment)}</TableCell>
                       </>
                     )}
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-                        <a href={item.source_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
+                      {item.source_url ? (
+                        <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
+                          <a href={item.source_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      ) : (
+                         <Button variant="ghost" size="icon" disabled>
+                            <ExternalLink className="h-4 w-4 text-gray-300" />
+                         </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
