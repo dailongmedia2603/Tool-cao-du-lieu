@@ -73,7 +73,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
             <NavLink to="/overview" icon={Home} isCollapsed={isCollapsed}>Overview</NavLink>
-            <NavLink to="/" icon={Target} isCollapsed={isCollapsed}>Chiến dịch</NavLink>
             
             {isCollapsed ? (
               <Tooltip>
@@ -103,6 +102,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
               </Accordion>
             )}
 
+            <NavLink to="/" icon={Target} isCollapsed={isCollapsed}>Chiến dịch</NavLink>
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
             <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>
