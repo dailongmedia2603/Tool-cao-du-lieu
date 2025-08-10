@@ -10,6 +10,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const logScan = async (supabaseAdmin: any, campaign_id: string, status: 'info' | 'success' | 'error', message: string) => {
+    if (!campaign_id) return;
+    await supabaseAdmin.from('scan_logs').insert({
+        campaign_id,
+        status,
+        message,
+        log_type: 'progress',
+        source_type: 'Manual Trigger'
+    });
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -28,11 +39,13 @@ serve(async (req) => {
 
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('danh_sach_chien_dich')
-      .select('type, sources')
+      .select('type, sources, name')
       .eq('id', campaign_id)
       .single();
 
     if (campaignError) throw campaignError;
+
+    await logScan(supabaseAdmin, campaign_id, 'info', `Đã nhận yêu cầu quét cho "${campaign.name}". Đang chờ xử lý...`);
 
     // Don't await these promises to run them in the background
     if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
