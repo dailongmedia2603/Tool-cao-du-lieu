@@ -41,31 +41,46 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        const now = new Date().toISOString();
+        const now = new Date();
+        const nowISO = now.toISOString();
 
-        // Lấy tất cả các chiến dịch đang hoạt động, đã đến hạn quét (hoặc chưa từng được quét)
-        // và chưa qua ngày kết thúc
-        const { data: campaigns, error } = await supabaseAdmin
+        // 1. Lấy tất cả các chiến dịch có khả năng chạy (đang hoạt động và chưa hết hạn)
+        const { data: activeCampaigns, error } = await supabaseAdmin
             .from('danh_sach_chien_dich')
             .select('*')
             .eq('status', 'active')
-            .or(`next_scan_at.is.null,next_scan_at.lte.${now}`) // Sửa lỗi ở đây
-            .or(`end_date.is.null,end_date.gt.${now}`);
+            .or(`end_date.is.null,end_date.gt.${nowISO}`);
 
         if (error) {
-            throw new Error(`Lỗi khi lấy danh sách chiến dịch: ${error.message}`);
+            throw new Error(`Lỗi khi lấy danh sách chiến dịch đang hoạt động: ${error.message}`);
         }
 
-        if (!campaigns || campaigns.length === 0) {
-            return new Response(JSON.stringify({ message: "Không có chiến dịch nào cần quét." }), {
+        if (!activeCampaigns || activeCampaigns.length === 0) {
+            return new Response(JSON.stringify({ message: "Không có chiến dịch nào đang hoạt động hoặc chưa hết hạn." }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             });
         }
 
-        console.log(`Tìm thấy ${campaigns.length} chiến dịch cần quét.`);
+        // 2. Lọc trong code để tìm các chiến dịch thực sự đến hạn quét
+        const campaignsToRun = activeCampaigns.filter(campaign => {
+            if (!campaign.next_scan_at) {
+                return true; // Chưa từng được lên lịch, chạy ngay.
+            }
+            const nextScanTime = new Date(campaign.next_scan_at);
+            return nextScanTime <= now; // Kiểm tra xem thời gian quét đã đến chưa.
+        });
 
-        for (const campaign of campaigns) {
+        if (campaignsToRun.length === 0) {
+            return new Response(JSON.stringify({ message: "Không có chiến dịch nào đến hạn quét." }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200,
+            });
+        }
+
+        console.log(`Tìm thấy ${campaignsToRun.length} chiến dịch cần quét.`);
+
+        for (const campaign of campaignsToRun) {
             console.log(`Đang xử lý chiến dịch: ${campaign.name} (${campaign.id})`);
 
             let scanFunctionName = '';
@@ -73,7 +88,6 @@ serve(async (req) => {
                 scanFunctionName = 'scan-facebook-campaign';
             } else {
                 console.log(`Bỏ qua chiến dịch '${campaign.name}' loại '${campaign.type}' vì chưa có chức năng quét.`);
-                // Vẫn cập nhật next_scan_at để tránh bị chọn lại liên tục
                 const nextScanAt = calculateNextScan(new Date(), campaign.scan_frequency, campaign.scan_unit);
                  await supabaseAdmin
                     .from('danh_sach_chien_dich')
@@ -113,7 +127,7 @@ serve(async (req) => {
             }
         }
 
-        return new Response(JSON.stringify({ success: true, message: `Đã xử lý ${campaigns.length} chiến dịch.` }), {
+        return new Response(JSON.stringify({ success: true, message: `Đã xử lý ${campaignsToRun.length} chiến dịch.` }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
