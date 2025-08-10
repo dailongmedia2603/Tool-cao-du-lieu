@@ -36,16 +36,30 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+  
+  let campaign_id_from_req = null;
+
+  const logScan = async (campaign_id: string, status: string, message: string, details: any = null) => {
+    if (!campaign_id) return;
+    await supabaseAdmin.from('scan_logs').insert({
+        campaign_id,
+        status,
+        message,
+        details
+    });
+  };
+
   try {
     const { campaign_id } = await req.json();
+    campaign_id_from_req = campaign_id;
+
     if (!campaign_id) {
       throw new Error("Cần có ID chiến dịch.");
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     const [apiKeyRes, campaignRes] = await Promise.all([
         supabaseAdmin.from('luu_api_key').select('*').eq('id', 1).single(),
@@ -80,6 +94,7 @@ serve(async (req) => {
 
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
     const allPostsData = [];
+    const apiCallDetails = [];
 
     for (const groupId of campaign.sources) {
         const since = toUnixTimestamp(campaign.scan_start_date);
@@ -92,12 +107,20 @@ serve(async (req) => {
         url += `&until=${until}`;
 
         const fbResponse = await fetch(url);
+        const responseText = await fbResponse.text();
+        
+        apiCallDetails.push({
+            url,
+            status: fbResponse.status,
+            response: responseText.substring(0, 2000) // Log first 2000 chars
+        });
+
         if (!fbResponse.ok) {
-            console.error(`Proxy server returned non-OK status for group ${groupId}: ${fbResponse.status} ${await fbResponse.text()}`);
+            console.error(`Proxy server returned non-OK status for group ${groupId}: ${fbResponse.status} ${responseText}`);
             continue;
         }
         
-        const proxyResponse = await fbResponse.json();
+        const proxyResponse = JSON.parse(responseText);
 
         if (proxyResponse.success && proxyResponse.data && proxyResponse.data.data) {
             const posts = proxyResponse.data.data;
@@ -188,13 +211,17 @@ serve(async (req) => {
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
     }
+    
+    const successMessage = `Quét hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
+    await logScan(campaign_id_from_req, 'success', successMessage, { api_calls: apiCallDetails, found_posts: finalResults.length });
 
-    return new Response(JSON.stringify({ success: true, message: `Quét hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.` }), {
+    return new Response(JSON.stringify({ success: true, message: successMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
     console.error(error);
+    await logScan(campaign_id_from_req, 'error', error.message, { stack: error.stack });
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ExternalLink, Download, Filter, FileText, X } from 'lucide-react';
+import { ExternalLink, Download, Filter, FileText, History } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,6 +16,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
 import * as XLSX from "xlsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScanLogsDialog, ScanLog } from "@/components/ScanLogsDialog";
 
 interface ReportData {
   id: string;
@@ -50,6 +51,11 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // Logs state
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [scanLogs, setScanLogs] = useState<ScanLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -228,6 +234,24 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     }
   };
 
+  const handleOpenLogs = async () => {
+    if (!selectedCampaign) return;
+    setIsLogsOpen(true);
+    setLoadingLogs(true);
+
+    const { data, error } = await supabase.functions.invoke('get-scan-logs', {
+        body: { campaign_id: selectedCampaign.id }
+    });
+
+    if (error) {
+        showError(`Không thể tải logs: ${error.message}`);
+        setScanLogs([]);
+    } else {
+        setScanLogs(data as ScanLog[]);
+    }
+    setLoadingLogs(false);
+  };
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -263,6 +287,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
               <CardDescription>Kết quả quét được từ chiến dịch. Hiển thị {filteredData.length} kết quả.</CardDescription>
             </div>
             <div className="flex space-x-2">
+              <Button variant="outline" size="sm" onClick={handleOpenLogs}><History className="h-4 w-4 mr-2" /> Logs</Button>
               <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Lọc</Button>
@@ -452,6 +477,13 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ScanLogsDialog
+        isOpen={isLogsOpen}
+        onOpenChange={setIsLogsOpen}
+        logs={scanLogs}
+        loading={loadingLogs}
+      />
     </>
   );
 };
