@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2, CheckCircle, XCircle, FileClock, Activity } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface ScanLog {
   id: string;
@@ -137,7 +139,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1">
-          <div className="space-y-4 p-4">
+          <div className="p-4">
             {loading ? (
               <div className="text-center text-gray-500 flex items-center justify-center p-8">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" /> Đang tải trạng thái...
@@ -149,24 +151,48 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
                 <p className="mt-1 text-sm text-gray-500">Trạng thái sẽ xuất hiện ở đây khi bạn bắt đầu quét.</p>
               </div>
             ) : (
-              scanStatuses.map(status => (
-                <div key={status.campaignId} className="p-4 border border-orange-100 rounded-lg bg-white/60">
-                  <div className="flex items-start space-x-4">
-                    <div className="mt-1">
-                      {status.status === 'scanning' && <Loader2 className="h-5 w-5 text-brand-orange animate-spin" />}
-                      {status.status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
-                      {status.status === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-gray-800">{status.campaignName}</p>
-                      <p className="text-sm text-gray-600">{status.latestMessage}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(status.logs[0].scan_time), { addSuffix: true, locale: vi })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))
+              <Accordion type="multiple" className="w-full space-y-3">
+                {scanStatuses.map(status => (
+                  <AccordionItem value={status.campaignId} key={status.campaignId} className="border border-orange-100 rounded-lg bg-white/60 overflow-hidden">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                      <div className="flex items-start space-x-4 w-full">
+                        <div className="mt-1">
+                          {status.status === 'scanning' && <Loader2 className="h-5 w-5 text-brand-orange animate-spin" />}
+                          {status.status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                          {status.status === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="font-bold text-gray-800">{status.campaignName}</p>
+                          <p className="text-sm text-gray-600">{status.latestMessage}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formatDistanceToNow(new Date(status.logs[0].scan_time), { addSuffix: true, locale: vi })}
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <div className="pl-9 space-y-3 border-l-2 border-orange-200 ml-2.5">
+                        {status.logs.slice().reverse().map(log => (
+                          <div key={log.id} className="flex items-start space-x-3 relative">
+                             <div className={cn(
+                                "absolute -left-[1.2rem] top-1.5 h-4 w-4 rounded-full",
+                                log.status === 'success' && "bg-green-500",
+                                log.status === 'error' && "bg-red-500",
+                                log.status === 'info' && "bg-blue-500",
+                             )}></div>
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-700">{log.message}</p>
+                              <p className="text-xs text-gray-400">
+                                {formatDistanceToNow(new Date(log.scan_time), { addSuffix: true, locale: vi })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             )}
           </div>
         </ScrollArea>
