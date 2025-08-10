@@ -5,6 +5,11 @@ import ReportWidget from '@/components/ReportWidget';
 import CampaignSelector from '@/components/CampaignSelector';
 import ReportDetailsTable from '@/components/ReportDetailsTable';
 import { BarChart, MessageSquare, Users, AlertCircle } from 'lucide-react';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 const Reports = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -74,19 +79,23 @@ const Reports = () => {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="min-h-[600px] w-full"
+      >
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
           <CampaignSelector
             campaigns={campaigns}
             selectedCampaignId={selectedCampaignId}
             onSelectCampaign={setSelectedCampaignId}
             loading={loadingCampaigns}
           />
-        </div>
-        <div className="lg:col-span-2">
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={75}>
           <ReportDetailsTable selectedCampaign={selectedCampaign} />
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
