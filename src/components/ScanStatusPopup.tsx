@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, CheckCircle, XCircle, FileClock, Activity } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, FileClock, Activity, Zap, Bot } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 interface ScanLog {
   id: string;
@@ -15,6 +16,7 @@ interface ScanLog {
   status: 'success' | 'error' | 'info';
   message: string;
   log_type: 'progress' | 'final';
+  source_type: string | null;
 }
 
 interface SessionScanStatus {
@@ -24,6 +26,7 @@ interface SessionScanStatus {
   logs: ScanLog[];
   status: 'scanning' | 'completed' | 'failed';
   latestMessage: string;
+  triggerType: 'Manual' | 'Automatic';
 }
 
 interface ScanStatusPopupProps {
@@ -102,6 +105,9 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
           currentSessionLogs.push(log);
           if (log.log_type === 'final') {
             const latestLog = currentSessionLogs[currentSessionLogs.length - 1];
+            const firstLog = currentSessionLogs[0];
+            const triggerType = firstLog.source_type === 'Manual Trigger' ? 'Manual' : 'Automatic';
+            
             allSessions.push({
               sessionId: latestLog.id,
               campaignId: campaignId,
@@ -109,6 +115,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
               logs: currentSessionLogs,
               status: latestLog.status === 'success' ? 'completed' : 'failed',
               latestMessage: latestLog.message,
+              triggerType,
             });
             currentSessionLogs = [];
           }
@@ -116,6 +123,9 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
 
         if (currentSessionLogs.length > 0) {
           const latestLog = currentSessionLogs[currentSessionLogs.length - 1];
+          const firstLog = currentSessionLogs[0];
+          const triggerType = firstLog.source_type === 'Manual Trigger' ? 'Manual' : 'Automatic';
+
           allSessions.push({
             sessionId: currentSessionLogs[0].id,
             campaignId: campaignId,
@@ -123,6 +133,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
             logs: currentSessionLogs,
             status: 'scanning',
             latestMessage: latestLog.message,
+            triggerType,
           });
         }
       }
@@ -187,7 +198,12 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
                           {session.status === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
                         </div>
                         <div className="flex-1 text-left">
-                          <p className="font-bold text-gray-800">{session.campaignName}</p>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <p className="font-bold text-gray-800">{session.campaignName}</p>
+                            <Badge variant={session.triggerType === 'Manual' ? 'default' : 'secondary'} className={cn('py-0.5 px-2 text-xs', session.triggerType === 'Manual' ? 'bg-brand-orange text-white' : 'bg-gray-100 text-gray-600')}>
+                              {session.triggerType === 'Manual' ? <><Zap className="h-3 w-3 mr-1"/>Thủ công</> : <><Bot className="h-3 w-3 mr-1"/>Tự động</>}
+                            </Badge>
+                          </div>
                           <p className="text-sm text-gray-600">{session.latestMessage}</p>
                           <p className="text-xs text-gray-400 mt-1">
                             {formatDistanceToNow(new Date(session.logs[0].scan_time), { addSuffix: true, locale: vi })}
@@ -197,7 +213,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                       <div className="pl-9 space-y-3 border-l-2 border-orange-200 ml-2.5">
-                        {session.logs.map(log => (
+                        {session.logs.slice().reverse().map(log => (
                           <div key={log.id} className="flex items-start space-x-3 relative">
                              <div className={cn(
                                 "absolute -left-[1.2rem] top-1.5 h-4 w-4 rounded-full",
