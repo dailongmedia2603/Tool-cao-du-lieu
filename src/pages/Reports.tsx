@@ -10,13 +10,17 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { useSearchParams } from 'react-router-dom';
 
 const Reports = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    const campaignIdFromUrl = searchParams.get('campaign_id');
+
     const fetchCampaigns = async () => {
       setLoadingCampaigns(true);
       const { data, error } = await supabase
@@ -28,8 +32,9 @@ const Reports = () => {
         console.error("Error fetching campaigns:", error);
       } else {
         setCampaigns(data as Campaign[]);
-        // Auto-select the first campaign if available
-        if (data && data.length > 0) {
+        if (campaignIdFromUrl && data.some(c => c.id === campaignIdFromUrl)) {
+          setSelectedCampaignId(campaignIdFromUrl);
+        } else if (data && data.length > 0) {
           setSelectedCampaignId(data[0].id);
         }
       }
@@ -37,7 +42,7 @@ const Reports = () => {
     };
 
     fetchCampaigns();
-  }, []);
+  }, [searchParams]);
 
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId) || null;
 

@@ -17,6 +17,7 @@ import {
 import { MoreHorizontal, Play, Pause, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 export interface Campaign {
   id: string;
@@ -48,6 +49,8 @@ const CampaignList = ({
   onDelete,
   onViewDetails,
 }: CampaignListProps) => {
+  const navigate = useNavigate();
+
   const getScanUnitText = (unit: string) => {
     switch (unit) {
       case "minute":
@@ -136,6 +139,7 @@ const CampaignList = ({
                   <Button
                     className="bg-brand-orange hover:bg-brand-orange/90 text-white animate-pulse-orange"
                     size="sm"
+                    onClick={() => navigate(`/reports?campaign_id=${campaign.id}`)}
                   >
                     Xem report
                   </Button>
