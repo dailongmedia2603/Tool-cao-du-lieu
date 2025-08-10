@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ExternalLink, Download, Filter, FileText, History } from 'lucide-react';
+import { ExternalLink, Download, Filter, FileText, History, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +17,8 @@ import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-
 import * as XLSX from "xlsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScanLogsDialog, ScanLog } from "@/components/ScanLogsDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ReportData {
   id: string;
@@ -39,6 +41,11 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const [loading, setLoading] = useState(false);
   const [isContentModalOpen, setIsContentModalOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<string | null>(null);
+
+  // Selection & Deletion states
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter states
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -92,6 +99,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   useEffect(() => {
     setFilteredData(reportData);
     setCurrentPage(1);
+    setSelectedRows([]);
     // Reset filters when data changes
     setSelectedKeywords([]);
     setStartDate(undefined);
@@ -99,6 +107,12 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     setSelectedAiEvaluations([]);
     setSelectedSentiments([]);
   }, [reportData]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, itemsPerPage]);
 
   const keywordOptions = useMemo(() => {
     const allKeywords = reportData.flatMap(item => item.keywords_found || []);
@@ -202,11 +216,10 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Báo cáo");
 
-    // Auto-adjust column widths
     const colWidths = Object.keys(dataToExport[0]).map(key => {
       let maxLength = key.length;
       if (key === 'Nội dung bài viết' || key === 'Nội dung') {
-        maxLength = 60; // Set a fixed width for content columns
+        maxLength = 60;
       } else {
         maxLength = Math.max(
           key.length,
@@ -252,11 +265,38 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     setLoadingLogs(false);
   };
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, currentPage, itemsPerPage]);
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedRows(prev => [...new Set([...prev, ...pageIds])]);
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedRows(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selectedCampaign || selectedRows.length === 0) return;
+    setIsDeleting(true);
+
+    const { data, error } = await supabase.functions.invoke('delete-report-items', {
+        body: {
+            item_ids: selectedRows,
+            campaign_type: selectedCampaign.type,
+        }
+    });
+
+    setIsDeleting(false);
+    setIsDeleteAlertOpen(false);
+
+    if (error) {
+        showError(`Xóa thất bại: ${error.message}`);
+    } else {
+        showSuccess(`Đã xóa thành công ${selectedRows.length} mục.`);
+        setReportData(prev => prev.filter(item => !selectedRows.includes(item.id)));
+        setSelectedRows([]);
+    }
+  };
 
   const totalPages = useMemo(() => {
     if (itemsPerPage === -1) return 1;
@@ -276,6 +316,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   }
 
   const isFacebookCampaign = selectedCampaign.type === 'Facebook';
+  const isAllOnPageSelected = paginatedData.length > 0 && paginatedData.every(item => selectedRows.includes(item.id));
 
   return (
     <>
@@ -286,60 +327,40 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
               <CardTitle className="text-xl">{selectedCampaign.name}</CardTitle>
               <CardDescription>Kết quả quét được từ chiến dịch. Hiển thị {filteredData.length} kết quả.</CardDescription>
             </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={handleOpenLogs}><History className="h-4 w-4 mr-2" /> Logs</Button>
-              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Lọc</Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 bg-gradient-to-br from-white via-brand-orange-light/50 to-white" align="end">
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium leading-none">Bộ lọc</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Lọc kết quả báo cáo theo các tiêu chí.
-                      </p>
-                    </div>
-                    <div className="grid gap-2">
-                      {isFacebookCampaign && (
-                        <>
-                          <div className="grid grid-cols-3 items-center gap-4">
-                            <Label>Từ khoá</Label>
-                            <div className="col-span-2">
-                              <MultiSelectCombobox options={keywordOptions} selected={selectedKeywords} onChange={setSelectedKeywords} placeholder="Chọn từ khoá..." />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 items-center gap-4">
-                            <Label>AI đánh giá</Label>
-                            <div className="col-span-2">
-                              <MultiSelectCombobox options={aiEvaluationOptions} selected={selectedAiEvaluations} onChange={setSelectedAiEvaluations} placeholder="Chọn đánh giá..." />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      <div className="grid grid-cols-3 items-center gap-4">
-                        <Label>Cảm xúc</Label>
-                        <div className="col-span-2">
-                          <MultiSelectCombobox options={sentimentOptions} selected={selectedSentiments} onChange={setSelectedSentiments} placeholder="Chọn cảm xúc..." />
+            <div className="flex items-center space-x-2">
+              {selectedRows.length > 0 ? (
+                <Button variant="destructive" size="sm" onClick={() => setIsDeleteAlertOpen(true)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Xóa ({selectedRows.length})
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleOpenLogs}><History className="h-4 w-4 mr-2" /> Logs</Button>
+                  <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm"><Filter className="h-4 w-4 mr-2" /> Lọc</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-gradient-to-br from-white via-brand-orange-light/50 to-white" align="end">
+                      <div className="grid gap-4">
+                        <div className="space-y-2"><h4 className="font-medium leading-none">Bộ lọc</h4><p className="text-sm text-muted-foreground">Lọc kết quả báo cáo theo các tiêu chí.</p></div>
+                        <div className="grid gap-2">
+                          {isFacebookCampaign && (
+                            <>
+                              <div className="grid grid-cols-3 items-center gap-4"><Label>Từ khoá</Label><div className="col-span-2"><MultiSelectCombobox options={keywordOptions} selected={selectedKeywords} onChange={setSelectedKeywords} placeholder="Chọn từ khoá..." /></div></div>
+                              <div className="grid grid-cols-3 items-center gap-4"><Label>AI đánh giá</Label><div className="col-span-2"><MultiSelectCombobox options={aiEvaluationOptions} selected={selectedAiEvaluations} onChange={setSelectedAiEvaluations} placeholder="Chọn đánh giá..." /></div></div>
+                            </>
+                          )}
+                          <div className="grid grid-cols-3 items-center gap-4"><Label>Cảm xúc</Label><div className="col-span-2"><MultiSelectCombobox options={sentimentOptions} selected={selectedSentiments} onChange={setSelectedSentiments} placeholder="Chọn cảm xúc..." /></div></div>
+                          <div className="grid grid-cols-3 items-center gap-4"><Label>Từ ngày</Label><div className="col-span-2"><DateTimePicker date={startDate} setDate={setStartDate} /></div></div>
+                          <div className="grid grid-cols-3 items-center gap-4"><Label>Đến ngày</Label><div className="col-span-2"><DateTimePicker date={endDate} setDate={setEndDate} /></div></div>
                         </div>
+                        <div className="flex justify-between"><Button variant="ghost" onClick={handleClearFilters} className="text-brand-orange hover:text-brand-orange/80">Xóa bộ lọc</Button><Button onClick={handleApplyFilters} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Áp dụng</Button></div>
                       </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                        <Label>Từ ngày</Label>
-                        <div className="col-span-2"><DateTimePicker date={startDate} setDate={setStartDate} /></div>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                        <Label>Đến ngày</Label>
-                        <div className="col-span-2"><DateTimePicker date={endDate} setDate={setEndDate} /></div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
-                        <Button variant="ghost" onClick={handleClearFilters} className="text-brand-orange hover:text-brand-orange/80">Xóa bộ lọc</Button>
-                        <Button onClick={handleApplyFilters} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Áp dụng</Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <Button variant="outline" size="sm" onClick={handleExportToExcel}><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
+                    </PopoverContent>
+                  </Popover>
+                  <Button variant="outline" size="sm" onClick={handleExportToExcel}><Download className="h-4 w-4 mr-2" /> Xuất file</Button>
+                </>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -348,6 +369,14 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={isAllOnPageSelected}
+                      onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                      aria-label="Select all"
+                      disabled={paginatedData.length === 0}
+                    />
+                  </TableHead>
                   {isFacebookCampaign ? (
                     <>
                       <TableHead>Nội dung bài viết</TableHead>
@@ -370,12 +399,21 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isFacebookCampaign ? 7 : 6} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
                 ) : paginatedData.length === 0 ? (
-                  <TableRow><TableCell colSpan={isFacebookCampaign ? 6 : 5} className="h-24 text-center">Không có dữ liệu nào phù hợp.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isFacebookCampaign ? 7 : 6} className="h-24 text-center">Không có dữ liệu nào phù hợp.</TableCell></TableRow>
                 ) : (
                   paginatedData.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.id} data-state={selectedRows.includes(item.id) && "selected"}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRows.includes(item.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedRows(prev => checked ? [...prev, item.id] : prev.filter(id => id !== item.id));
+                          }}
+                          aria-label="Select row"
+                        />
+                      </TableCell>
                       {isFacebookCampaign ? (
                         <>
                           <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewContent(item.content)}>{item.content}</TableCell>
@@ -484,6 +522,23 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
         logs={scanLogs}
         loading={loadingLogs}
       />
+
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Bạn sẽ xóa vĩnh viễn {selectedRows.length} mục đã chọn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelected} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+              {isDeleting ? "Đang xóa..." : "Xác nhận xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
