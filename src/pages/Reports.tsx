@@ -83,7 +83,7 @@ const Reports = () => {
         direction="horizontal"
         className="min-h-[600px] w-full"
       >
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+        <ResizablePanel defaultSize={20} minSize={20} maxSize={40}>
           <CampaignSelector
             campaigns={campaigns}
             selectedCampaignId={selectedCampaignId}
@@ -91,8 +91,8 @@ const Reports = () => {
             loading={loadingCampaigns}
           />
         </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={75}>
+        <ResizableHandle withHandle className="mx-2" />
+        <ResizablePanel defaultSize={80}>
           <ReportDetailsTable selectedCampaign={selectedCampaign} />
         </ResizablePanel>
       </ResizablePanelGroup>
