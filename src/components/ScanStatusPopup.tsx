@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,7 +17,8 @@ interface ScanLog {
   log_type: 'progress' | 'final';
 }
 
-interface CampaignScanStatus {
+interface SessionScanStatus {
+  sessionId: string;
   campaignId: string;
   campaignName: string;
   logs: ScanLog[];
@@ -32,7 +33,7 @@ interface ScanStatusPopupProps {
 }
 
 const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupProps) => {
-  const [scanStatuses, setScanStatuses] = useState<CampaignScanStatus[]>([]);
+  const [scanSessions, setScanSessions] = useState<SessionScanStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
       }
       
       if (!campaignsData || campaignsData.length === 0) {
-        setScanStatuses([]);
+        setScanSessions([]);
         setLoading(false);
         return;
       }
@@ -74,7 +75,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
         .select('*')
         .gte('scan_time', twentyFourHoursAgo)
         .in('campaign_id', campaignIds)
-        .order('scan_time', { ascending: false });
+        .order('scan_time', { ascending: true });
 
       if (logError) {
         console.error("Error fetching initial logs:", logError);
@@ -84,7 +85,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
 
       const recentLogs: ScanLog[] = recentLogsData || [];
 
-      const groupedLogs = recentLogs.reduce((acc, log) => {
+      const logsByCampaign = recentLogs.reduce((acc, log) => {
         if (!acc[log.campaign_id]) {
           acc[log.campaign_id] = [];
         }
@@ -92,23 +93,47 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
         return acc;
       }, {} as Record<string, ScanLog[]>);
 
-      const statuses: CampaignScanStatus[] = Object.entries(groupedLogs).map(([campaignId, logs]) => {
-        const latestLog = logs[0];
-        let status: 'scanning' | 'completed' | 'failed' = 'scanning';
-        if (latestLog.log_type === 'final') {
-          status = latestLog.status === 'success' ? 'completed' : 'failed';
-        }
-        
-        return {
-          campaignId,
-          campaignName: campaignMap.get(campaignId) || 'Unknown Campaign',
-          logs,
-          status,
-          latestMessage: latestLog.message,
-        };
-      }).sort((a, b) => new Date(b.logs[0].scan_time).getTime() - new Date(a.logs[0].scan_time).getTime());
+      const allSessions: SessionScanStatus[] = [];
+      for (const campaignId of Object.keys(logsByCampaign)) {
+        const campaignLogs = logsByCampaign[campaignId];
+        let currentSessionLogs: ScanLog[] = [];
 
-      setScanStatuses(statuses);
+        for (const log of campaignLogs) {
+          currentSessionLogs.push(log);
+          if (log.log_type === 'final') {
+            const latestLog = currentSessionLogs[currentSessionLogs.length - 1];
+            allSessions.push({
+              sessionId: latestLog.id,
+              campaignId: campaignId,
+              campaignName: campaignMap.get(campaignId) || 'Unknown Campaign',
+              logs: currentSessionLogs,
+              status: latestLog.status === 'success' ? 'completed' : 'failed',
+              latestMessage: latestLog.message,
+            });
+            currentSessionLogs = [];
+          }
+        }
+
+        if (currentSessionLogs.length > 0) {
+          const latestLog = currentSessionLogs[currentSessionLogs.length - 1];
+          allSessions.push({
+            sessionId: currentSessionLogs[0].id,
+            campaignId: campaignId,
+            campaignName: campaignMap.get(campaignId) || 'Unknown Campaign',
+            logs: currentSessionLogs,
+            status: 'scanning',
+            latestMessage: latestLog.message,
+          });
+        }
+      }
+
+      allSessions.sort((a, b) => {
+        const firstLogTimeA = new Date(a.logs[0].scan_time).getTime();
+        const firstLogTimeB = new Date(b.logs[0].scan_time).getTime();
+        return firstLogTimeB - firstLogTimeA;
+      });
+
+      setScanSessions(allSessions);
       setLoading(false);
     };
 
@@ -144,7 +169,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
               <div className="text-center text-gray-500 flex items-center justify-center p-8">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" /> Đang tải trạng thái...
               </div>
-            ) : scanStatuses.length === 0 ? (
+            ) : scanSessions.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <FileClock className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium">Không có hoạt động quét gần đây</h3>
@@ -152,27 +177,27 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
               </div>
             ) : (
               <Accordion type="multiple" className="w-full space-y-3">
-                {scanStatuses.map(status => (
-                  <AccordionItem value={status.campaignId} key={status.campaignId} className="border border-orange-100 rounded-lg bg-white/60 overflow-hidden">
+                {scanSessions.map(session => (
+                  <AccordionItem value={session.sessionId} key={session.sessionId} className="border border-orange-100 rounded-lg bg-white/60 overflow-hidden">
                     <AccordionTrigger className="p-4 hover:no-underline">
                       <div className="flex items-start space-x-4 w-full">
                         <div className="mt-1">
-                          {status.status === 'scanning' && <Loader2 className="h-5 w-5 text-brand-orange animate-spin" />}
-                          {status.status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
-                          {status.status === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
+                          {session.status === 'scanning' && <Loader2 className="h-5 w-5 text-brand-orange animate-spin" />}
+                          {session.status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                          {session.status === 'failed' && <XCircle className="h-5 w-5 text-red-500" />}
                         </div>
                         <div className="flex-1 text-left">
-                          <p className="font-bold text-gray-800">{status.campaignName}</p>
-                          <p className="text-sm text-gray-600">{status.latestMessage}</p>
+                          <p className="font-bold text-gray-800">{session.campaignName}</p>
+                          <p className="text-sm text-gray-600">{session.latestMessage}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {formatDistanceToNow(new Date(status.logs[0].scan_time), { addSuffix: true, locale: vi })}
+                            {formatDistanceToNow(new Date(session.logs[0].scan_time), { addSuffix: true, locale: vi })}
                           </p>
                         </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                       <div className="pl-9 space-y-3 border-l-2 border-orange-200 ml-2.5">
-                        {status.logs.slice().reverse().map(log => (
+                        {session.logs.map(log => (
                           <div key={log.id} className="flex items-start space-x-3 relative">
                              <div className={cn(
                                 "absolute -left-[1.2rem] top-1.5 h-4 w-4 rounded-full",
