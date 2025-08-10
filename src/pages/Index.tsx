@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
-import { toast } from "sonner";
 import CampaignList from "@/components/CampaignList";
 import { CampaignDetailsDialog } from "@/components/CampaignDetailsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -385,18 +384,18 @@ const Index = () => {
 
   const handleManualScan = async (campaign: Campaign) => {
     setManuallyScanningId(campaign.id);
-    setIsScanStatusOpen(true);
     
     const { error } = await supabase.functions.invoke('trigger-manual-scan', {
       body: { campaign_id: campaign.id },
     });
 
     if (error) {
-      toast.error(`Không thể bắt đầu quét: ${error.message}`);
+      showError(`Không thể bắt đầu quét: ${error.message}`);
+    } else {
+      showSuccess("Đã bắt đầu quét. Hãy xem tiến độ ở nút 'Trạng thái quét' nhé.");
     }
     
-    // The popup will show the status, no need for complex toast logic here
-    setTimeout(() => setManuallyScanningId(null), 5000); // Reset button state after 5s
+    setTimeout(() => setManuallyScanningId(null), 5000);
   };
 
   const filteredCampaigns = useMemo(() => {
