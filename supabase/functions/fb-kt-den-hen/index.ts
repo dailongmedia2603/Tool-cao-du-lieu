@@ -31,6 +31,8 @@ const calculateNextScan = (lastScan: Date, frequency: number, unit: string): Dat
 };
 
 serve(async (req) => {
+    console.log(`[fb-kt-den-hen] Function invoked with method: ${req.method}`);
+
     if (req.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders })
     }
