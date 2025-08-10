@@ -32,6 +32,7 @@ export interface Campaign {
   keywords: string | null;
   ai_filter_enabled: boolean;
   ai_prompt: string | null;
+  next_scan_at: string | null;
 }
 
 const Index = () => {
@@ -210,6 +211,7 @@ const Index = () => {
       name, type, sources,
       end_date: localEndDate ? localEndDate.toISOString() : null,
       scan_frequency: localScanFrequency, scan_unit: localScanUnit,
+      next_scan_at: (type === 'Facebook' ? (scanStartDate || new Date()) : new Date()).toISOString(),
       ...payload
     };
 
@@ -242,10 +244,18 @@ const Index = () => {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     const toastId = showLoading("Đang cập nhật trạng thái...");
-    const { error } = await supabase.from('danh_sach_chien_dich').update({ status: newStatus }).eq('id', id);
+    
+    const updatePayload: { status: string; next_scan_at?: string } = { status: newStatus };
+    if (newStatus === 'active') {
+        updatePayload.next_scan_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase.from('danh_sach_chien_dich').update(updatePayload).eq('id', id);
+    
     dismissToast(toastId);
-    if (error) showError("Cập nhật thất bại.");
-    else {
+    if (error) {
+      showError("Cập nhật thất bại.");
+    } else {
       showSuccess("Cập nhật trạng thái thành công!");
       fetchCampaigns();
     }

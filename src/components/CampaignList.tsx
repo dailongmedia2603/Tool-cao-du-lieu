@@ -18,19 +18,7 @@ import { MoreHorizontal, Play, Pause, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-
-export interface Campaign {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  end_date: string | null;
-  created_at: string;
-  sources: string[];
-  scan_frequency: number;
-  scan_unit: string;
-  scan_start_date: string | null;
-}
+import { Campaign } from "@/pages/Index";
 
 interface CampaignListProps {
   campaigns: Campaign[];
