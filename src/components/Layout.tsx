@@ -1,8 +1,6 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { Button } from './ui/button';
-import { MessageCircle } from 'lucide-react';
 import { useSidebar } from '@/hooks/use-sidebar';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -18,11 +16,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {children}
           </div>
         </main>
-      </div>
-      <div className="fixed bottom-8 right-8 z-10">
-        <Button className="bg-brand-orange hover:bg-brand-orange/90 rounded-full h-14 w-14 shadow-lg">
-          <MessageCircle className="h-7 w-7 text-white" />
-        </Button>
       </div>
     </div>
   );
