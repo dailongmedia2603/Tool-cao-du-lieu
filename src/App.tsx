@@ -10,6 +10,7 @@ import Settings from "./pages/Settings";
 import ApiKeys from "./pages/ApiKeys";
 import DataSourceWebsite from "./pages/DataSourceWebsite";
 import DataSourceFacebook from "./pages/DataSourceFacebook";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/keys" element={<Layout><ApiKeys /></Layout>} />
           <Route path="/data-source/website" element={<Layout><DataSourceWebsite /></Layout>} />
           <Route path="/data-source/facebook" element={<Layout><DataSourceFacebook /></Layout>} />
+          <Route path="/reports" element={<Layout><Reports /></Layout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
