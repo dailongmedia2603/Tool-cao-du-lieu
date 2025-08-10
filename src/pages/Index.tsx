@@ -8,6 +8,7 @@ import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import CampaignList from "@/components/CampaignList";
+import { CampaignDetailsDialog } from "@/components/CampaignDetailsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
@@ -87,6 +88,9 @@ const Index = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingCampaign, setDeletingCampaign] = useState<Campaign | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // View details dialog state
+  const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
 
   const fetchCampaigns = async () => {
     setLoadingCampaigns(true);
@@ -308,6 +312,10 @@ const Index = () => {
     }
   };
 
+  const handleViewDetails = (campaign: Campaign) => {
+    setViewingCampaign(campaign);
+  };
+
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');
   const websiteCampaigns = campaigns.filter(c => c.type === 'Website');
   const combinedCampaigns = campaigns.filter(c => c.type === 'Tổng hợp');
@@ -409,7 +417,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={facebookCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+          <CampaignList campaigns={facebookCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
         </TabsContent>
 
         <TabsContent value="website" className="pt-6">
@@ -467,7 +475,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={websiteCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+          <CampaignList campaigns={websiteCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
         </TabsContent>
 
         <TabsContent value="all" className="pt-6">
@@ -532,7 +540,7 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <CampaignList campaigns={combinedCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} />
+          <CampaignList campaigns={combinedCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
         </TabsContent>
       </Tabs>
 
@@ -591,6 +599,16 @@ const Index = () => {
           <AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isDeleting ? "Đang xóa..." : "Xóa"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CampaignDetailsDialog
+        campaign={viewingCampaign}
+        isOpen={!!viewingCampaign}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setViewingCampaign(null);
+          }
+        }}
+      />
     </div>
   );
 };

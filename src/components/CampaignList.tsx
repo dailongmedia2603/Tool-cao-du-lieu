@@ -37,6 +37,7 @@ interface CampaignListProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
+  onViewDetails: (campaign: Campaign) => void;
 }
 
 const CampaignList = ({
@@ -45,6 +46,7 @@ const CampaignList = ({
   onStatusChange,
   onEdit,
   onDelete,
+  onViewDetails,
 }: CampaignListProps) => {
   const getScanUnitText = (unit: string) => {
     switch (unit) {
@@ -89,8 +91,16 @@ const CampaignList = ({
             </TableRow>
           ) : (
             campaigns.map((campaign) => (
-              <TableRow key={campaign.id}>
-                <TableCell className="font-medium">{campaign.name}</TableCell>
+              <TableRow key={campaign.id} className="hover:bg-brand-orange-light/30">
+                <TableCell className="font-medium">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-gray-800 hover:text-brand-orange font-medium"
+                    onClick={() => onViewDetails(campaign)}
+                  >
+                    {campaign.name}
+                  </Button>
+                </TableCell>
                 <TableCell>{campaign.type}</TableCell>
                 <TableCell>
                   <Badge
