@@ -22,6 +22,7 @@ const logScan = async (supabaseAdmin: any, campaign_id: string, status: string, 
     });
 };
 
+// Main function handler
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -42,6 +43,8 @@ serve(async (req) => {
       throw new Error("Cần có ID chiến dịch.");
     }
 
+    await logScan(supabaseAdmin, campaign_id, 'info', '(1/4) Bắt đầu quét website: Đang lấy cấu hình...');
+
     const [apiKeyRes, campaignRes] = await Promise.all([
         supabaseAdmin.from('luu_api_key').select('firecrawl_api_key, gemini_api_key, gemini_model').eq('id', 1).single(),
         supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
@@ -50,58 +53,63 @@ serve(async (req) => {
     if (apiKeyRes.error) throw new Error(`Lấy API key thất bại: ${apiKeyRes.error.message}`);
     const { firecrawl_api_key, gemini_api_key, gemini_model } = apiKeyRes.data || {};
     
-    if (!firecrawl_api_key) {
-        await logScan(supabaseAdmin, campaign_id, 'error', "API Key của Firecrawl chưa được cấu hình.");
-        throw new Error("API Key của Firecrawl chưa được cấu hình.");
-    }
-    if (!gemini_api_key || !gemini_model) {
-        await logScan(supabaseAdmin, campaign_id, 'error', "API Key hoặc Model của Gemini chưa được cấu hình.");
-        throw new Error("API Key hoặc Model của Gemini chưa được cấu hình.");
-    }
+    if (!firecrawl_api_key) throw new Error("API Key của Firecrawl chưa được cấu hình.");
+    if (!gemini_api_key || !gemini_model) throw new Error("API Key hoặc Model của Gemini chưa được cấu hình.");
 
     if (campaignRes.error) throw new Error(`Lấy chiến dịch thất bại: ${campaignRes.error.message}`);
-    if (!campaignRes.data) throw new Error("Không tìm thấy chiến dịch.");
     const campaign = campaignRes.data;
 
     const websiteUrls = campaign.sources.filter((s: string) => s.startsWith('http') || s.startsWith('www'));
     if (websiteUrls.length === 0) {
-        await logScan(supabaseAdmin, campaign_id, 'success', 'Chiến dịch không có nguồn website nào để quét.');
+        await logScan(supabaseAdmin, campaign_id, 'success', 'Hoàn tất: Chiến dịch không có nguồn website nào để quét.');
         return new Response(JSON.stringify({ success: true, message: "Không có nguồn website nào để quét." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
     }
     
-    await logScan(supabaseAdmin, campaign_id, 'info', 'Bắt đầu quét nguồn website...');
+    await logScan(supabaseAdmin, campaign_id, 'info', `(2/4) Đang thu thập dữ liệu từ ${websiteUrls.length} website...`);
 
+    const firecrawlPromises = websiteUrls.map(async (url: string) => {
+        const firecrawlUrl = `https://api.firecrawl.dev/v0${campaign.website_scan_type || '/scrape'}`;
+        const body = { url, pageOptions: { onlyMainContent: true } };
+        try {
+            const response = await fetch(firecrawlUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firecrawl_api_key}` },
+                body: JSON.stringify(body),
+            });
+            const responseData = await response.json();
+            if (!response.ok || !responseData.success) {
+                throw new Error(responseData.error || 'Unknown Firecrawl error');
+            }
+            return { success: true, url, data: responseData.data };
+        } catch (error) {
+            return { success: false, url, error: error.message };
+        }
+    });
+
+    const firecrawlResults = await Promise.all(firecrawlPromises);
+    const successfulCrawls = firecrawlResults.filter(r => r.success);
+    const failedCrawls = firecrawlResults.filter(r => !r.success);
+
+    if (failedCrawls.length > 0) {
+        await logScan(supabaseAdmin, campaign_id, 'error', `Thu thập dữ liệu thất bại cho ${failedCrawls.length} website.`, { failedUrls: failedCrawls });
+    }
+    if (successfulCrawls.length === 0) {
+        throw new Error("Không thể thu thập dữ liệu từ bất kỳ website nào.");
+    }
+
+    await logScan(supabaseAdmin, campaign_id, 'info', `(3/4) AI đang phân tích nội dung từ ${successfulCrawls.length} website...`);
+    
     const genAI = new GoogleGenerativeAI(gemini_api_key);
     const aiModel = genAI.getGenerativeModel({ model: gemini_model });
-    const allExtractedListings = [];
 
-    for (const url of websiteUrls) {
-        await logScan(supabaseAdmin, campaign_id, 'info', `(1/3) Đang thu thập dữ liệu từ ${url}...`);
-        const firecrawlUrl = `https://api.firecrawl.dev/v0${campaign.website_scan_type || '/scrape'}`;
-        const body = { url: url, pageOptions: { onlyMainContent: true } };
-
-        const response = await fetch(firecrawlUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firecrawl_api_key}` },
-            body: JSON.stringify(body),
-        });
-
-        const responseData = await response.json();
-
-        if (!response.ok || !responseData.success) {
-            console.error(`Firecrawl API call failed for URL ${url}:`, responseData.error || 'Unknown error');
-            await logScan(supabaseAdmin, campaign_id, 'error', `(1/3) Lỗi khi thu thập dữ liệu từ ${url}.`);
-            continue;
+    const analysisPromises = successfulCrawls.map(async (crawl) => {
+        const rawContent = crawl.data.markdown || crawl.data.content;
+        if (!rawContent) {
+            return { success: false, url: crawl.url, error: "No content from Firecrawl" };
         }
-        await logScan(supabaseAdmin, campaign_id, 'success', `(1/3) Thu thập dữ liệu từ ${url} thành công.`);
-
-        const rawContent = responseData.data.markdown || responseData.data.content;
-        if (!rawContent) continue;
-
-        await logScan(supabaseAdmin, campaign_id, 'info', `(2/3) AI đang phân tích dữ liệu từ ${url}...`);
         const prompt = `
             You are an expert data extraction agent. Analyze the provided Markdown content from a webpage and identify all individual posts or listings.
             For each listing you find, extract the following information:
@@ -119,47 +127,51 @@ serve(async (req) => {
 
             Here is the Markdown content to analyze:
             ---
-            ${rawContent}
+            ${rawContent.substring(0, 30000)}
             ---
         `;
-
         try {
             const result = await aiModel.generateContent(prompt);
             const responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
             const extractedData = JSON.parse(responseText);
-            await logScan(supabaseAdmin, campaign_id, 'success', `(2/3) AI đã phân tích xong dữ liệu từ ${url}.`);
-
-            if (Array.isArray(extractedData)) {
-                const listings = extractedData.map(item => ({
-                    campaign_id: campaign.id,
-                    title: item.title || null,
-                    description: item.description || null,
-                    price: item.price || null,
-                    area: item.area || null,
-                    address: item.address || null,
-                    listing_url: item.listing_url || url,
-                    posted_date_string: item.posted_date_string || null,
-                    source_url: url,
-                    ...(campaign.type === 'Tổng hợp' && { source_type: 'Website' })
-                }));
-                allExtractedListings.push(...listings);
-            }
-        } catch (e) {
-            console.error(`Gemini AI processing failed for URL ${url}:`, e.message);
-            await logScan(supabaseAdmin, campaign_id, 'error', `(2/3) Phân tích AI thất bại cho URL: ${url}`, { error: e.message });
+            return { success: true, url: crawl.url, data: extractedData };
+        } catch (error) {
+            return { success: false, url: crawl.url, error: error.message };
         }
+    });
+
+    const analysisResults = await Promise.all(analysisPromises);
+    const successfulAnalyses = analysisResults.filter(r => r.success);
+    const failedAnalyses = analysisResults.filter(r => !r.success);
+
+    if (failedAnalyses.length > 0) {
+        await logScan(supabaseAdmin, campaign_id, 'error', `Phân tích AI thất bại cho ${failedAnalyses.length} website.`, { failedUrls: failedAnalyses });
     }
 
+    const allExtractedListings = successfulAnalyses.flatMap(analysis => {
+        if (!Array.isArray(analysis.data)) return [];
+        return analysis.data.map(item => ({
+            campaign_id: campaign.id,
+            title: item.title || null,
+            description: item.description || null,
+            price: item.price || null,
+            area: item.area || null,
+            address: item.address || null,
+            listing_url: item.listing_url || analysis.url,
+            posted_date_string: item.posted_date_string || null,
+            source_url: analysis.url,
+            ...(campaign.type === 'Tổng hợp' && { source_type: 'Website' })
+        }));
+    });
+
     if (allExtractedListings.length > 0) {
-        await logScan(supabaseAdmin, campaign_id, 'info', `(3/3) Đang lưu ${allExtractedListings.length} kết quả vào báo cáo...`);
+        await logScan(supabaseAdmin, campaign_id, 'info', `(4/4) Đang lưu ${allExtractedListings.length} kết quả vào báo cáo...`);
         const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Website';
         const { error: insertError } = await supabaseAdmin.from(reportTable).insert(allExtractedListings);
 
         if (insertError) {
-            await logScan(supabaseAdmin, campaign_id, 'error', `(3/3) Lưu kết quả thất bại.`);
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign_id, 'success', `(3/3) Đã lưu ${allExtractedListings.length} kết quả.`);
     }
     
     const successMessage = `Quét Website hoàn tất. Đã xử lý ${websiteUrls.length} URL và trích xuất được ${allExtractedListings.length} tin đăng.`;
