@@ -70,19 +70,20 @@ const CampaignList = ({
             <TableHead>Ngày bắt đầu quét</TableHead>
             <TableHead>Ngày kết thúc</TableHead>
             <TableHead>Tần suất quét</TableHead>
+            <TableHead>Report</TableHead>
             <TableHead className="text-right">Hành động</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 Đang tải danh sách chiến dịch...
               </TableCell>
             </TableRow>
           ) : campaigns.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+              <TableCell colSpan={8} className="h-24 text-center text-gray-500">
                 Chưa có chiến dịch nào trong mục này.
               </TableCell>
             </TableRow>
@@ -120,6 +121,14 @@ const CampaignList = ({
                   {`${campaign.scan_frequency} ${getScanUnitText(
                     campaign.scan_unit
                   )}`}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white animate-pulse-orange"
+                    size="sm"
+                  >
+                    Xem report
+                  </Button>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
