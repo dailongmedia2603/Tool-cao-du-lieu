@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MultiSelectCombobox, SelectOption } from "@/components/ui/multi-select-combobox";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
+import { toast } from "sonner";
 import CampaignList from "@/components/CampaignList";
 import { CampaignDetailsDialog } from "@/components/CampaignDetailsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlusCircle } from "lucide-react";
+import { ScanLog } from "@/components/ScanLogsDialog";
 
 export interface Campaign {
   id: string;
@@ -239,35 +241,7 @@ const Index = () => {
       fetchCampaigns();
 
       if (newCampaign) {
-        const scanToastId = showLoading("Bắt đầu quét dữ liệu lần đầu...");
-        const scanPromises = [];
-
-        if (newCampaign.type === 'Facebook' || newCampaign.type === 'Tổng hợp') {
-            scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
-                body: { campaign_id: newCampaign.id },
-            }));
-        }
-        if (newCampaign.type === 'Website' || newCampaign.type === 'Tổng hợp') {
-            scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
-                body: { campaign_id: newCampaign.id },
-            }));
-        }
-
-        const results = await Promise.allSettled(scanPromises);
-        dismissToast(scanToastId);
-
-        let allSuccess = true;
-        results.forEach(result => {
-            if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
-                allSuccess = false;
-                const errorMessage = result.status === 'rejected' ? result.reason.message : result.value.error.message;
-                showError(`Quét lần đầu thất bại: ${errorMessage}`);
-            }
-        });
-
-        if (allSuccess) {
-            showSuccess("Quét lần đầu hoàn tất! Kiểm tra báo cáo để xem kết quả.");
-        }
+        handleManualScan(newCampaign);
       }
     }
     setIsCreatingState(false);
@@ -409,58 +383,52 @@ const Index = () => {
 
   const handleManualScan = async (campaign: Campaign) => {
     setManuallyScanningId(campaign.id);
-    const toastId = showLoading(`Đang quét chiến dịch "${campaign.name}"...`);
-    try {
-      const scanPromises = [];
+    
+    const toastId = toast.loading(`Bắt đầu quét chiến dịch "${campaign.name}"...`);
 
-      if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
-          const facebookSources = campaign.sources.filter(s => !s.startsWith('http') && !s.startsWith('www'));
-          if (facebookSources.length > 0) {
-              scanPromises.push(supabase.functions.invoke('scan-facebook-campaign', {
-                  body: { campaign_id: campaign.id },
-              }));
-          }
-      }
-      if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
-          const websiteSources = campaign.sources.filter(s => s.startsWith('http') || s.startsWith('www'));
-          if (websiteSources.length > 0) {
-              scanPromises.push(supabase.functions.invoke('scan-website-campaign', {
-                  body: { campaign_id: campaign.id },
-              }));
-          }
-      }
+    const channel = supabase.channel(`scan-logs:${campaign.id}`);
 
-      if (scanPromises.length === 0) {
-          dismissToast(toastId);
-          showError("Chiến dịch này không có nguồn nào để quét.");
-          return;
-      }
-
-      const results = await Promise.allSettled(scanPromises);
-      dismissToast(toastId);
-
-      let allSuccess = true;
-      let messages: string[] = [];
-      results.forEach(result => {
-          if (result.status === 'rejected' || (result.status === 'fulfilled' && result.value.error)) {
-              allSuccess = false;
-              const errorDetails = result.status === 'fulfilled' ? result.value.error : result.reason;
-              const errorMessage = errorDetails.message || JSON.stringify(errorDetails);
-              showError(`Quét thất bại: ${errorMessage}`);
-          } else if (result.status === 'fulfilled' && result.value.data?.message) {
-              messages.push(result.value.data.message);
-          }
-      });
-
-      if (allSuccess) {
-          showSuccess("Quét thủ công hoàn tất! " + messages.join(" "));
-      }
-    } catch (error: any) {
-        dismissToast(toastId);
-        showError(`Lỗi không mong muốn khi quét: ${error.message}`);
-    } finally {
+    const cleanup = () => {
+        supabase.removeChannel(channel);
         setManuallyScanningId(null);
-    }
+    };
+
+    channel.on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'scan_logs', 
+        filter: `campaign_id=eq.${campaign.id}` 
+      }, (payload) => {
+        const newLog = payload.new as ScanLog;
+        
+        const isFinalSuccess = newLog.status === 'success' && (newLog.message.includes('hoàn tất') || newLog.message.includes('Không có nguồn'));
+        const isError = newLog.status === 'error';
+
+        if (isFinalSuccess) {
+          toast.success(newLog.message, { id: toastId, duration: 5000 });
+          cleanup();
+        } else if (isError) {
+          toast.error(newLog.message, { id: toastId, duration: 10000 });
+          cleanup();
+        } else {
+          toast.loading(newLog.message, { id: toastId });
+        }
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          supabase.functions.invoke('trigger-manual-scan', {
+            body: { campaign_id: campaign.id },
+          }).then(({ error }) => {
+            if (error) {
+              toast.error(`Không thể bắt đầu quét: ${error.message}`, { id: toastId });
+              cleanup();
+            }
+          });
+        } else if (err) {
+            toast.error(`Lỗi kết nối real-time: ${err.message}`, { id: toastId });
+            cleanup();
+        }
+      });
   };
 
   const facebookCampaigns = campaigns.filter(c => c.type === 'Facebook');

@@ -103,6 +103,8 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
     }
 
+    await logScan(supabaseAdmin, campaign.id, 'info', 'Bắt đầu quét nguồn Facebook...');
+
     const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Facebook';
     
     let latestPostQuery = supabaseAdmin
@@ -134,6 +136,7 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
+    await logScan(supabaseAdmin, campaign.id, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`);
     for (const groupId of facebookGroupIds) {
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}`;
         if (sinceTimestamp) {
@@ -165,8 +168,10 @@ serve(async (req) => {
             console.error(errorMessage, JSON.stringify(proxyResponse));
         }
     }
+    await logScan(supabaseAdmin, campaign.id, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`);
 
     let filteredPosts = [];
+    await logScan(supabaseAdmin, campaign.id, 'info', `(2/3) Đang lọc ${allPostsData.length} bài viết...`);
     if (keywords.length > 0) {
         for (const post of allPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
@@ -180,6 +185,7 @@ serve(async (req) => {
 
     let finalResults = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_api_key && gemini_model) {
+        await logScan(supabaseAdmin, campaign.id, 'info', `(2/3) AI đang phân tích ${filteredPosts.length} bài viết...`);
         const genAI = new GoogleGenerativeAI(gemini_api_key);
         const model = genAI.getGenerativeModel({ model: gemini_model });
 
@@ -236,8 +242,10 @@ serve(async (req) => {
             sentiment: null,
         }));
     }
+    await logScan(supabaseAdmin, campaign.id, 'success', `(2/3) Phân tích và lọc xong.`);
 
     if (finalResults.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, 'info', `(3/3) Đang lưu ${finalResults.length} kết quả vào báo cáo...`);
         const dataToInsert = campaign.type === 'Tổng hợp' 
             ? finalResults.map(r => {
                 const { content, ...rest } = r;
@@ -250,8 +258,10 @@ serve(async (req) => {
             .insert(dataToInsert);
 
         if (insertError) {
+            await logScan(supabaseAdmin, campaign.id, 'error', `(3/3) Lưu kết quả thất bại.`);
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
+        await logScan(supabaseAdmin, campaign.id, 'success', `(3/3) Đã lưu ${finalResults.length} kết quả.`);
     }
     
     const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;

@@ -8,13 +8,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { CheckCircle, XCircle, Clock, Code, CalendarRange } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code, CalendarRange, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ScanLog {
   id: string;
   scan_time: string;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'info';
   message: string;
   details: any;
 }
@@ -56,8 +56,10 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
                         <div className="flex items-center space-x-4">
                           {log.status === 'success' ? (
                             <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : (
+                          ) : log.status === 'error' ? (
                             <XCircle className="h-5 w-5 text-red-500" />
+                          ) : (
+                            <Info className="h-5 w-5 text-blue-500" />
                           )}
                           <div className="text-left">
                             <p className="font-semibold text-gray-800">{log.message}</p>
@@ -75,8 +77,8 @@ export const ScanLogsDialog = ({ isOpen, onOpenChange, logs, loading }: ScanLogs
                             </div>
                           </div>
                         </div>
-                        <Badge variant={log.status === 'success' ? 'default' : 'destructive'} className={cn(log.status === 'success' && 'bg-green-500')}>
-                          {log.status === 'success' ? 'Thành công' : 'Thất bại'}
+                        <Badge variant={log.status === 'success' ? 'default' : log.status === 'error' ? 'destructive' : 'secondary'} className={cn(log.status === 'success' && 'bg-green-500', log.status === 'info' && 'bg-blue-100 text-blue-800')}>
+                          {log.status === 'success' ? 'Thành công' : log.status === 'error' ? 'Thất bại' : 'Thông tin'}
                         </Badge>
                       </div>
                     </AccordionTrigger>

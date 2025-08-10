@@ -71,12 +71,15 @@ serve(async (req) => {
             status: 200,
         });
     }
+    
+    await logScan(supabaseAdmin, campaign_id, 'info', 'Bắt đầu quét nguồn website...');
 
     const genAI = new GoogleGenerativeAI(gemini_api_key);
     const aiModel = genAI.getGenerativeModel({ model: gemini_model });
     const allExtractedListings = [];
 
     for (const url of websiteUrls) {
+        await logScan(supabaseAdmin, campaign_id, 'info', `(1/3) Đang thu thập dữ liệu từ ${url}...`);
         const firecrawlUrl = `https://api.firecrawl.dev/v0${campaign.website_scan_type || '/scrape'}`;
         const body = { url: url, pageOptions: { onlyMainContent: true } };
 
@@ -90,12 +93,15 @@ serve(async (req) => {
 
         if (!response.ok || !responseData.success) {
             console.error(`Firecrawl API call failed for URL ${url}:`, responseData.error || 'Unknown error');
+            await logScan(supabaseAdmin, campaign_id, 'error', `(1/3) Lỗi khi thu thập dữ liệu từ ${url}.`);
             continue;
         }
+        await logScan(supabaseAdmin, campaign_id, 'success', `(1/3) Thu thập dữ liệu từ ${url} thành công.`);
 
         const rawContent = responseData.data.markdown || responseData.data.content;
         if (!rawContent) continue;
 
+        await logScan(supabaseAdmin, campaign_id, 'info', `(2/3) AI đang phân tích dữ liệu từ ${url}...`);
         const prompt = `
             You are an expert data extraction agent. Analyze the provided Markdown content from a webpage and identify all individual posts or listings.
             For each listing you find, extract the following information:
@@ -121,6 +127,7 @@ serve(async (req) => {
             const result = await aiModel.generateContent(prompt);
             const responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
             const extractedData = JSON.parse(responseText);
+            await logScan(supabaseAdmin, campaign_id, 'success', `(2/3) AI đã phân tích xong dữ liệu từ ${url}.`);
 
             if (Array.isArray(extractedData)) {
                 const listings = extractedData.map(item => ({
@@ -139,17 +146,20 @@ serve(async (req) => {
             }
         } catch (e) {
             console.error(`Gemini AI processing failed for URL ${url}:`, e.message);
-            await logScan(supabaseAdmin, campaign_id, 'error', `Phân tích AI thất bại cho URL: ${url}`, { error: e.message });
+            await logScan(supabaseAdmin, campaign_id, 'error', `(2/3) Phân tích AI thất bại cho URL: ${url}`, { error: e.message });
         }
     }
 
     if (allExtractedListings.length > 0) {
+        await logScan(supabaseAdmin, campaign_id, 'info', `(3/3) Đang lưu ${allExtractedListings.length} kết quả vào báo cáo...`);
         const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Website';
         const { error: insertError } = await supabaseAdmin.from(reportTable).insert(allExtractedListings);
 
         if (insertError) {
+            await logScan(supabaseAdmin, campaign_id, 'error', `(3/3) Lưu kết quả thất bại.`);
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
+        await logScan(supabaseAdmin, campaign_id, 'success', `(3/3) Đã lưu ${allExtractedListings.length} kết quả.`);
     }
     
     const successMessage = `Quét Website hoàn tất. Đã xử lý ${websiteUrls.length} URL và trích xuất được ${allExtractedListings.length} tin đăng.`;
