@@ -35,6 +35,8 @@ serve(async (req) => {
         return new Response(null, { headers: corsHeaders })
     }
 
+    console.log("Hàm lập lịch được đánh thức, bắt đầu kiểm tra...");
+
     try {
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
@@ -56,7 +58,9 @@ serve(async (req) => {
         }
 
         if (!activeCampaigns || activeCampaigns.length === 0) {
-            return new Response(JSON.stringify({ message: "Không có chiến dịch nào đang hoạt động hoặc chưa hết hạn." }), {
+            const message = "Không có chiến dịch nào đang hoạt động hoặc chưa hết hạn. Bỏ qua.";
+            console.log(message);
+            return new Response(JSON.stringify({ message }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             });
@@ -72,13 +76,15 @@ serve(async (req) => {
         });
 
         if (campaignsToRun.length === 0) {
-            return new Response(JSON.stringify({ message: "Không có chiến dịch nào đến hạn quét." }), {
+            const message = "Kiểm tra hoàn tất. Không có chiến dịch nào đến hạn quét. Bỏ qua.";
+            console.log(message);
+            return new Response(JSON.stringify({ message }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 200,
             });
         }
 
-        console.log(`Tìm thấy ${campaignsToRun.length} chiến dịch cần quét.`);
+        console.log(`Tìm thấy ${campaignsToRun.length} chiến dịch cần quét. Bắt đầu xử lý...`);
 
         for (const campaign of campaignsToRun) {
             console.log(`Đang xử lý chiến dịch: ${campaign.name} (${campaign.id})`);
@@ -126,8 +132,10 @@ serve(async (req) => {
                 }
             }
         }
-
-        return new Response(JSON.stringify({ success: true, message: `Đã xử lý ${campaignsToRun.length} chiến dịch.` }), {
+        
+        const successMessage = `Đã xử lý xong ${campaignsToRun.length} chiến dịch.`;
+        console.log(successMessage);
+        return new Response(JSON.stringify({ success: true, message: successMessage }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
