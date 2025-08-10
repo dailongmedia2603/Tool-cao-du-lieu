@@ -359,7 +359,7 @@ const Index = () => {
         <TabsList className="inline-flex items-center justify-center rounded-lg border border-orange-200 p-1 bg-white">
           <TabsTrigger value="facebook" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Facebook</TabsTrigger>
           <TabsTrigger value="website" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Website</TabsTrigger>
-          <TabsTrigger value="all" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Tất cả</TabsTrigger>
+          <TabsTrigger value="combined" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Tổng hợp</TabsTrigger>
         </TabsList>
         
         <TabsContent value="facebook" className="pt-6">
@@ -493,7 +493,7 @@ const Index = () => {
           <CampaignList campaigns={websiteCampaigns} loading={loadingCampaigns} onStatusChange={handleStatusChange} onEdit={handleEditClick} onDelete={handleDeleteClick} onViewDetails={handleViewDetails} />
         </TabsContent>
 
-        <TabsContent value="all" className="pt-6">
+        <TabsContent value="combined" className="pt-6">
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
               <AccordionTrigger className="p-4 bg-gradient-to-r from-brand-orange-light to-white hover:no-underline">
