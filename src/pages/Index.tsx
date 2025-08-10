@@ -291,6 +291,34 @@ const Index = () => {
       scan_unit: updatedScanUnit,
     };
 
+    // Check if scan schedule has changed and recalculate next_scan_at
+    const frequencyChanged = editingCampaign.scan_frequency !== updatedScanFrequency;
+    const unitChanged = editingCampaign.scan_unit !== updatedScanUnit;
+
+    if (frequencyChanged || unitChanged) {
+        const calculateNextScan = (baseTime: Date, frequency: number, unit: string): Date => {
+            const nextScan = new Date(baseTime.getTime());
+            switch (unit) {
+                case 'minute':
+                    nextScan.setMinutes(nextScan.getMinutes() + frequency);
+                    break;
+                case 'hour':
+                    nextScan.setHours(nextScan.getHours() + frequency);
+                    break;
+                case 'day':
+                    nextScan.setDate(nextScan.getDate() + frequency);
+                    break;
+                default:
+                    nextScan.setHours(nextScan.getHours() + frequency);
+                    break;
+            }
+            return nextScan;
+        };
+        // Recalculate next_scan_at from the current time
+        const nextScanTime = calculateNextScan(new Date(), updatedScanFrequency, updatedScanUnit);
+        payload.next_scan_at = nextScanTime.toISOString();
+    }
+
     if (editingCampaign.type === 'Facebook') {
       payload = {
         ...payload,
