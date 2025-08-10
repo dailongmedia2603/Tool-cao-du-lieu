@@ -55,6 +55,14 @@ export function MultiSelectCombobox({
     selected.includes(option.value)
   );
 
+  const truncateLabel = (label: string) => {
+    const words = label.split(' ');
+    if (words.length > 2) {
+      return words.slice(0, 2).join(' ') + '...';
+    }
+    return label;
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -77,8 +85,8 @@ export function MultiSelectCombobox({
                   className="bg-brand-orange-light text-brand-orange border border-orange-200 hover:bg-orange-200"
                   onClick={(e) => handleUnselect(e, option.value)}
                 >
-                  <span className="truncate max-w-[180px]" title={option.label}>
-                    {option.label}
+                  <span title={option.label}>
+                    {truncateLabel(option.label)}
                   </span>
                   <X className="ml-1 h-3 w-3 cursor-pointer shrink-0" />
                 </Badge>
