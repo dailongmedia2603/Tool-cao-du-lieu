@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, LifeBuoy, PanelLeftClose, PanelRightClose, Users } from "lucide-react";
+import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy } from "lucide-react";
+import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,11 +56,34 @@ const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode })
   );
 };
 
+interface SupportWidgetData {
+  support_widget_icon: keyof typeof Icons;
+  support_widget_title: string;
+  support_widget_description: string;
+  support_widget_link: string;
+}
+
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleSidebar: () => void }) => {
   const location = useLocation();
   const { roles } = useAuth();
   const isSuperAdmin = roles.includes('Super Admin');
   const isDataSourceActive = location.pathname.startsWith('/data-source');
+  const [supportWidgetData, setSupportWidgetData] = useState<SupportWidgetData | null>(null);
+
+  useEffect(() => {
+    const fetchWidgetData = async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('support_widget_icon, support_widget_title, support_widget_description, support_widget_link')
+        .single();
+      if (data) {
+        setSupportWidgetData(data as SupportWidgetData);
+      }
+    };
+    fetchWidgetData();
+  }, []);
+
+  const SupportIcon = supportWidgetData ? Icons[supportWidgetData.support_widget_icon] || LifeBuoy : LifeBuoy;
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -121,15 +147,15 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <div className="flex-1 rounded-lg border border-orange-200 bg-brand-orange-light p-3 cursor-pointer hover:bg-orange-100">
+              <a href={supportWidgetData?.support_widget_link || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-lg border border-orange-200 bg-brand-orange-light p-3 cursor-pointer hover:bg-orange-100 no-underline text-current">
                 <div className="flex items-center space-x-2">
-                  <LifeBuoy className="h-5 w-5 text-brand-orange" />
+                  <SupportIcon className="h-5 w-5 text-brand-orange" />
                   <div>
-                    <p className="font-semibold text-sm leading-tight">Hỗ trợ</p>
-                    <p className="text-xs text-gray-600 leading-tight">Liên hệ hỗ trợ</p>
+                    <p className="font-semibold text-sm leading-tight">{supportWidgetData?.support_widget_title || 'Hỗ trợ'}</p>
+                    <p className="text-xs text-gray-600 leading-tight">{supportWidgetData?.support_widget_description || 'Liên hệ hỗ trợ'}</p>
                   </div>
                 </div>
-              </div>
+              </a>
               <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={toggleSidebar}>
                 <PanelLeftClose className="h-5 w-5" />
               </Button>
