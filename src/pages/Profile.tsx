@@ -11,6 +11,7 @@ import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast
 interface ProfileData {
   first_name: string | null;
   last_name: string | null;
+  phone: string | null;
 }
 
 const Profile = () => {
@@ -31,31 +32,31 @@ const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        showError('Không thể tải thông tin tài khoản.');
-        console.error(error);
-      } else {
-        setProfile(data);
-        setFirstName(data?.first_name || '');
-        setLastName(data?.last_name || '');
-        setPhone(user.phone || '');
-      }
+  const fetchProfile = async () => {
+    if (!user) {
       setLoading(false);
-    };
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, phone')
+      .eq('id', user.id)
+      .single();
 
+    if (error && error.code !== 'PGRST116') {
+      showError('Không thể tải thông tin tài khoản.');
+      console.error(error);
+    } else {
+      setProfile(data);
+      setFirstName(data?.first_name || '');
+      setLastName(data?.last_name || '');
+      setPhone(data?.phone || '');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, [user]);
 
@@ -64,29 +65,24 @@ const Profile = () => {
     setIsSaving(true);
     const toastId = showLoading('Đang cập nhật...');
 
-    let formattedPhone = phone.trim();
-    // Automatically format to E.164 for Vietnamese numbers
-    if (formattedPhone && formattedPhone.startsWith('0')) {
-      formattedPhone = `+84${formattedPhone.substring(1)}`;
-    }
-
-    const { error: profileError } = await supabase
+    const { error } = await supabase
       .from('profiles')
-      .update({ first_name: firstName, last_name: lastName, updated_at: new Date().toISOString() })
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone.trim(),
+        updated_at: new Date().toISOString()
+      })
       .eq('id', user.id);
-
-    const { error: authError } = await supabase.auth.updateUser({
-      phone: formattedPhone,
-    });
 
     dismissToast(toastId);
 
-    if (profileError || authError) {
-      showError(`Cập nhật thất bại: ${profileError?.message || authError?.message}`);
+    if (error) {
+      showError(`Cập nhật thất bại: ${error.message}`);
     } else {
       showSuccess('Cập nhật thông tin thành công!');
       setIsEditOpen(false);
-      await supabase.auth.refreshSession();
+      fetchProfile(); // Re-fetch profile to update UI
     }
     setIsSaving(false);
   };
@@ -145,7 +141,7 @@ const Profile = () => {
             </div>
             <div className="space-y-1">
               <Label>Số điện thoại</Label>
-              <p className="font-semibold text-gray-800">{user.phone || 'Chưa cập nhật'}</p>
+              <p className="font-semibold text-gray-800">{profile?.phone || 'Chưa cập nhật'}</p>
             </div>
           </div>
           <div className="space-y-1">
