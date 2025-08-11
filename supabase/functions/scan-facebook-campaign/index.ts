@@ -81,18 +81,26 @@ serve(async (req) => {
       throw new Error("Cần có ID chiến dịch.");
     }
 
-    const [apiKeyRes, campaignRes] = await Promise.all([
-        supabaseAdmin.from('luu_api_key').select('*').eq('id', 1).single(),
-        supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
-    ]);
+    const { data: campaign, error: campaignError } = await supabaseAdmin
+        .from('danh_sach_chien_dich')
+        .select('*')
+        .eq('id', campaign_id)
+        .single();
 
-    if (apiKeyRes.error) throw new Error(`Lấy API key thất bại: ${apiKeyRes.error.message}`);
-    if (!apiKeyRes.data) throw new Error("Không tìm thấy cấu hình API key.");
-    const apiKeys = apiKeyRes.data;
+    if (campaignError) throw new Error(`Lấy chiến dịch thất bại: ${campaignError.message}`);
+    if (!campaign) throw new Error("Không tìm thấy chiến dịch.");
 
-    if (campaignRes.error) throw new Error(`Lấy chiến dịch thất bại: ${campaignRes.error.message}`);
-    if (!campaignRes.data) throw new Error("Không tìm thấy chiến dịch.");
-    const campaign = campaignRes.data;
+    const campaignOwnerId = campaign.user_id;
+    if (!campaignOwnerId) throw new Error("Chiến dịch không có người sở hữu.");
+
+    const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
+        .from('user_api_keys')
+        .select('*')
+        .eq('user_id', campaignOwnerId)
+        .single();
+
+    if (apiKeyError) throw new Error(`Lấy API key cho người dùng ${campaignOwnerId} thất bại: ${apiKeyError.message}`);
+    if (!apiKeys) throw new Error(`Người dùng ${campaignOwnerId} chưa cấu hình API key.`);
 
     if (campaign.type !== 'Facebook' && campaign.type !== 'Tổng hợp') {
         return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook hoặc Tổng hợp." }), {
@@ -118,7 +126,7 @@ serve(async (req) => {
     } = apiKeys;
 
     if (!facebook_api_url || !facebook_api_token) {
-        throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt.");
+        throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt của người dùng.");
     }
 
     await logScan(supabaseAdmin, campaign.id, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');

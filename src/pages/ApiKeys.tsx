@@ -25,11 +25,14 @@ import {
 } from "@/utils/toast";
 import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ApiKeys = () => {
+  const { user } = useAuth();
+
   // Gemini states
   const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro");
+  const [geminiModel, setGeminiModel] = useState("gemini-1.5-pro-latest");
   const [isTestingGemini, setIsTestingGemini] = useState(false);
   const [geminiTestStatus, setGeminiTestStatus] = useState<
     "success" | "error" | null
@@ -55,17 +58,19 @@ const ApiKeys = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
+      if (!user) return;
+
       const { data, error } = await supabase
-        .from("luu_api_key")
+        .from("user_api_keys")
         .select("*")
-        .eq("id", 1)
+        .eq("user_id", user.id)
         .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
         console.error("Error fetching settings:", error);
       } else if (data) {
         setGeminiApiKey(data.gemini_api_key || "");
-        setGeminiModel(data.gemini_model || "gemini-2.5-pro");
+        setGeminiModel(data.gemini_model || "gemini-1.5-pro-latest");
         setFacebookApiUrl(
           data.facebook_api_url || "http://api.akng.io.vn/graph/"
         );
@@ -75,16 +80,17 @@ const ApiKeys = () => {
     };
 
     fetchSettings();
-  }, []);
+  }, [user]);
 
   const handleSave = async () => {
+    if (!user) return showError("Bạn phải đăng nhập để lưu cài đặt.");
     setIsSaving(true);
     const toastId = showLoading("Saving settings...");
 
     const { error } = await supabase
-      .from("luu_api_key")
+      .from("user_api_keys")
       .upsert({
-        id: 1,
+        user_id: user.id,
         gemini_api_key: geminiApiKey,
         gemini_model: geminiModel,
         facebook_api_url: facebookApiUrl,
@@ -269,14 +275,11 @@ const ApiKeys = () => {
                     <SelectValue placeholder="Select a model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-2.5-pro">
-                      Gemini 2.5 Pro
+                    <SelectItem value="gemini-1.5-pro-latest">
+                      Gemini 1.5 Pro
                     </SelectItem>
-                    <SelectItem value="gemini-2.5-flash">
-                      Gemini 2.5 Flash
-                    </SelectItem>
-                    <SelectItem value="gemini-2.5-flash-lite">
-                      Gemini 2.5 Flash-Lite
+                    <SelectItem value="gemini-1.5-flash-latest">
+                      Gemini 1.5 Flash
                     </SelectItem>
                   </SelectContent>
                 </Select>

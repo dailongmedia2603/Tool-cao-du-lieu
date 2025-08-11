@@ -47,19 +47,31 @@ serve(async (req) => {
 
     await logScan(supabaseAdmin, campaign_id, 'info', '(1/4) Bắt đầu quét website: Đang lấy cấu hình...', null, 'progress');
 
-    const [apiKeyRes, campaignRes] = await Promise.all([
-        supabaseAdmin.from('luu_api_key').select('firecrawl_api_key, gemini_api_key, gemini_model').eq('id', 1).single(),
-        supabaseAdmin.from('danh_sach_chien_dich').select('*').eq('id', campaign_id).single()
-    ]);
+    const { data: campaign, error: campaignError } = await supabaseAdmin
+        .from('danh_sach_chien_dich')
+        .select('*')
+        .eq('id', campaign_id)
+        .single();
 
-    if (apiKeyRes.error) throw new Error(`Lấy API key thất bại: ${apiKeyRes.error.message}`);
-    const { firecrawl_api_key, gemini_api_key, gemini_model } = apiKeyRes.data || {};
+    if (campaignError) throw new Error(`Lấy chiến dịch thất bại: ${campaignError.message}`);
+    if (!campaign) throw new Error("Không tìm thấy chiến dịch.");
+
+    const campaignOwnerId = campaign.user_id;
+    if (!campaignOwnerId) throw new Error("Chiến dịch không có người sở hữu.");
+
+    const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
+        .from('user_api_keys')
+        .select('firecrawl_api_key, gemini_api_key, gemini_model')
+        .eq('user_id', campaignOwnerId)
+        .single();
+
+    if (apiKeyError) throw new Error(`Lấy API key cho người dùng ${campaignOwnerId} thất bại: ${apiKeyError.message}`);
+    if (!apiKeys) throw new Error(`Người dùng ${campaignOwnerId} chưa cấu hình API key.`);
+
+    const { firecrawl_api_key, gemini_api_key, gemini_model } = apiKeys;
     
     if (!firecrawl_api_key) throw new Error("API Key của Firecrawl chưa được cấu hình.");
     if (!gemini_api_key || !gemini_model) throw new Error("API Key hoặc Model của Gemini chưa được cấu hình.");
-
-    if (campaignRes.error) throw new Error(`Lấy chiến dịch thất bại: ${campaignRes.error.message}`);
-    const campaign = campaignRes.data;
 
     const websiteUrls = campaign.sources.filter((s: string) => s.startsWith('http') || s.startsWith('www'));
     if (websiteUrls.length === 0) {
