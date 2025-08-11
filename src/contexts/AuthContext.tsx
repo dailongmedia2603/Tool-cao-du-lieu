@@ -30,39 +30,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        // Chạy song song việc lấy vai trò và hồ sơ để tối ưu tốc độ
-        const [rolesResult, profileResult] = await Promise.all([
-          supabase.rpc('get_user_roles'),
-          supabase.from('profiles').select('*').eq('id', session.user.id).single()
-        ]);
+        if (session?.user) {
+          const [rolesResult, profileResult] = await Promise.all([
+            supabase.rpc('get_user_roles'),
+            supabase.from('profiles').select('*').eq('id', session.user.id).single()
+          ]);
 
-        const { data: userRoles, error: rolesError } = rolesResult;
-        if (rolesError) {
-          console.error("Error fetching user roles:", rolesError);
+          const { data: userRoles, error: rolesError } = rolesResult;
+          if (rolesError) {
+            console.error("Error fetching user roles:", rolesError);
+            setRoles([]);
+          } else {
+            setRoles(userRoles.map((r: { role_name: string }) => r.role_name));
+          }
+
+          const { data: userProfile, error: profileError } = profileResult;
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error("Error fetching profile:", profileError);
+            setProfile(null);
+          } else {
+            setProfile(userProfile);
+          }
+        } else {
           setRoles([]);
-        } else {
-          setRoles(userRoles.map((r: { role_name: string }) => r.role_name));
-        }
-
-        const { data: userProfile, error: profileError } = profileResult;
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error("Error fetching profile:", profileError);
           setProfile(null);
-        } else {
-          setProfile(userProfile);
         }
-      } else {
-        // Nếu không có phiên, xóa dữ liệu người dùng
+      } catch (e) {
+        console.error("An unexpected error occurred in onAuthStateChange:", e);
+        // Xóa dữ liệu để đảm bảo an toàn khi có lỗi
         setRoles([]);
         setProfile(null);
+      } finally {
+        // Luôn luôn tắt màn hình tải, dù có lỗi hay không
+        setLoading(false);
       }
-      
-      // Đặt trạng thái loading thành false sau khi tất cả các hoạt động bất đồng bộ hoàn tất
-      setLoading(false);
     });
 
     return () => {
