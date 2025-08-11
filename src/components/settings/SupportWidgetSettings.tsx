@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
 import * as Icons from 'lucide-react';
 
-const iconOptions: { [key: string]: React.ReactNode } = {
+// Define the keys explicitly for type safety
+type IconKey = 'LifeBuoy' | 'HelpCircle' | 'MessageSquare' | 'Phone' | 'BookOpen';
+
+const iconOptions: Record<IconKey, React.ReactNode> = {
   LifeBuoy: <Icons.LifeBuoy className="h-5 w-5" />,
   HelpCircle: <Icons.HelpCircle className="h-5 w-5" />,
   MessageSquare: <Icons.MessageSquare className="h-5 w-5" />,
@@ -19,7 +22,7 @@ const iconOptions: { [key: string]: React.ReactNode } = {
 const SupportWidgetSettings = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [icon, setIcon] = useState<keyof typeof iconOptions>('LifeBuoy');
+  const [icon, setIcon] = useState<IconKey>('LifeBuoy');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [link, setLink] = useState('');
@@ -33,7 +36,7 @@ const SupportWidgetSettings = () => {
         .single();
 
       if (data) {
-        setIcon(data.support_widget_icon as keyof typeof iconOptions || 'LifeBuoy');
+        setIcon(data.support_widget_icon as IconKey || 'LifeBuoy');
         setTitle(data.support_widget_title || '');
         setDescription(data.support_widget_description || '');
         setLink(data.support_widget_link || '');
@@ -78,7 +81,7 @@ const SupportWidgetSettings = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Icon</Label>
-            <Select value={icon} onValueChange={(value) => setIcon(value as keyof typeof iconOptions)}>
+            <Select value={icon} onValueChange={(value) => setIcon(value as IconKey)}>
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center space-x-2">
@@ -88,7 +91,7 @@ const SupportWidgetSettings = () => {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {Object.keys(iconOptions).map((iconKey) => (
+                {(Object.keys(iconOptions) as IconKey[]).map((iconKey) => (
                   <SelectItem key={iconKey} value={iconKey}>
                     <div className="flex items-center space-x-2">
                       {iconOptions[iconKey]}
