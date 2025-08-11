@@ -112,27 +112,29 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>
           </nav>
         </div>
-        <div className={cn(
-          "border-t border-gray-200",
-          !isCollapsed && "p-4 space-y-4"
-        )}>
-          {!isCollapsed && (
-            <div className="rounded-lg border border-orange-200 bg-brand-orange-light p-4 cursor-pointer hover:bg-orange-100">
-              <div className="flex items-center space-x-3">
-                <LifeBuoy className="h-5 w-5 text-brand-orange" />
-                <p className="font-semibold text-sm">Hỗ trợ</p>
+        <div className="border-t border-gray-200 p-4">
+          {isCollapsed ? (
+            <div className="flex justify-center">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
+                <PanelRightClose className="h-5 w-5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="flex-1 rounded-lg border border-orange-200 bg-brand-orange-light p-3 cursor-pointer hover:bg-orange-100">
+                <div className="flex items-center space-x-2">
+                  <LifeBuoy className="h-5 w-5 text-brand-orange" />
+                  <div>
+                    <p className="font-semibold text-sm leading-tight">Hỗ trợ</p>
+                    <p className="text-xs text-gray-600 leading-tight">Liên hệ hỗ trợ</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Liên hệ hỗ trợ</p>
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={toggleSidebar}>
+                <PanelLeftClose className="h-5 w-5" />
+              </Button>
             </div>
           )}
-          <div className={cn(
-            "flex items-center w-full", 
-            isCollapsed ? "justify-center p-4" : "justify-end"
-          )}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
-              {isCollapsed ? <PanelRightClose className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-            </Button>
-          </div>
         </div>
       </aside>
     </TooltipProvider>
