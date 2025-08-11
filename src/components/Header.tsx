@@ -30,9 +30,9 @@ const Header = () => {
           <BookOpen className="h-5 w-5" />
           <span>Hướng dẫn</span>
         </Button>
-        <Button variant="outline" className="space-x-2">
+        <Button variant="outline" className="space-x-2" onClick={() => navigate('/pricing')}>
           <ArrowUpToLine className="h-5 w-5" />
-          <span>Upgrade Plan</span>
+          <span>Nâng cấp</span>
         </Button>
         <Button variant="outline" size="icon">
           <Bell className="h-5 w-5" />
