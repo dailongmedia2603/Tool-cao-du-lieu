@@ -112,7 +112,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>
           </nav>
         </div>
-        <div className="p-4 space-y-4 border-t border-gray-200">
+        <div className={cn(
+          "border-t border-gray-200",
+          !isCollapsed && "p-4 space-y-4"
+        )}>
           {!isCollapsed && (
             <div className="rounded-lg border border-orange-200 bg-brand-orange-light p-4 cursor-pointer hover:bg-orange-100">
               <div className="flex items-center space-x-3">
@@ -122,7 +125,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
               <p className="text-sm text-gray-600 mt-1">Liên hệ hỗ trợ</p>
             </div>
           )}
-          <div className={cn("flex items-center w-full", isCollapsed ? "justify-center" : "justify-end")}>
+          <div className={cn(
+            "flex items-center w-full", 
+            isCollapsed ? "justify-center p-4" : "justify-end"
+          )}>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
               {isCollapsed ? <PanelRightClose className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
             </Button>
