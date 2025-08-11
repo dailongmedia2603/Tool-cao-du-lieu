@@ -28,58 +28,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (session: Session | null) => {
-    if (session?.user) {
-      // Fetch roles
-      const { data: userRoles, error: rolesError } = await supabase.rpc('get_user_roles');
-      if (rolesError) {
-        console.error("Error fetching user roles:", rolesError);
-        setRoles([]);
-      } else {
-        setRoles(userRoles.map((r: { role_name: string }) => r.role_name));
-      }
-
-      // Fetch profile
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error("Error fetching profile:", profileError);
-        setProfile(null);
-      } else {
-        setProfile(userProfile);
-      }
-    } else {
-      setRoles([]);
-      setProfile(null);
-    }
-  };
-
   useEffect(() => {
-    const setData = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
-        setLoading(false);
-        return;
-      }
-
-      setSession(session);
-      setUser(session?.user ?? null);
-      await fetchUserData(session);
-      setLoading(false);
-    };
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      await fetchUserData(session);
-    });
 
-    setData();
+      if (session?.user) {
+        // Chạy song song việc lấy vai trò và hồ sơ để tối ưu tốc độ
+        const [rolesResult, profileResult] = await Promise.all([
+          supabase.rpc('get_user_roles'),
+          supabase.from('profiles').select('*').eq('id', session.user.id).single()
+        ]);
+
+        const { data: userRoles, error: rolesError } = rolesResult;
+        if (rolesError) {
+          console.error("Error fetching user roles:", rolesError);
+          setRoles([]);
+        } else {
+          setRoles(userRoles.map((r: { role_name: string }) => r.role_name));
+        }
+
+        const { data: userProfile, error: profileError } = profileResult;
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error("Error fetching profile:", profileError);
+          setProfile(null);
+        } else {
+          setProfile(userProfile);
+        }
+      } else {
+        // Nếu không có phiên, xóa dữ liệu người dùng
+        setRoles([]);
+        setProfile(null);
+      }
+      
+      // Đặt trạng thái loading thành false sau khi tất cả các hoạt động bất đồng bộ hoàn tất
+      setLoading(false);
+    });
 
     return () => {
       subscription.unsubscribe();
