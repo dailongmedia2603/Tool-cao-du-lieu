@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
@@ -14,15 +14,24 @@ import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Guide from "./pages/Guide";
+import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = () => {
-  const { session } = useAuth();
+  const { session, roles } = useAuth();
+  const location = useLocation();
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
+
+  // Prevent non-super-admins from accessing /account
+  if (location.pathname.startsWith('/account') && !roles.includes('Super Admin')) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Layout>
       <Outlet />
@@ -54,6 +63,7 @@ const AppContent = () => {
           <Route path="/reports" element={<Reports />} />
           <Route path="/account" element={<Account />} />
           <Route path="/guide" element={<Guide />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
