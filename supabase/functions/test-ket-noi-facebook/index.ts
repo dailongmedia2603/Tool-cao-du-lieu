@@ -40,21 +40,24 @@ serve(async (req) => {
     try {
       responseData = JSON.parse(responseText);
     } catch (e) {
-      const errorMessage = `The proxy server returned an invalid response (HTTP Status: ${response.status}). The response was: "${responseText.substring(0, 200)}..."`;
+      const errorMessage = `The API server returned an invalid response (HTTP Status: ${response.status}). The response was: "${responseText.substring(0, 200)}..."`;
       return new Response(JSON.stringify({ success: false, message: errorMessage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    // Correctly check for the nested success structure from your proxy
-    if (response.ok && responseData.success === true && responseData.data?.id) {
+    // Check for a successful connection from either a direct API call or a proxy
+    const isDirectSuccess = response.ok && responseData.id;
+    const isProxySuccess = response.ok && responseData.success === true && responseData.data?.id;
+
+    if (isDirectSuccess || isProxySuccess) {
       return new Response(JSON.stringify({ success: true, message: 'Connection successful!' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     } else {
-      const errorMessage = responseData.message || `Connection failed. The proxy returned: ${JSON.stringify(responseData)}`;
+      const errorMessage = responseData.message || responseData.error?.message || `Connection failed. The server returned: ${JSON.stringify(responseData)}`;
       return new Response(JSON.stringify({ success: false, message: errorMessage }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

@@ -180,18 +180,32 @@ serve(async (req) => {
         });
 
         if (!fbResponse.ok) {
-            console.error(`Proxy server returned non-OK status for group ${groupId}: ${fbResponse.status} ${responseText}`);
+            console.error(`API server returned non-OK status for group ${groupId}: ${fbResponse.status} ${responseText}`);
             continue;
         }
         
-        const proxyResponse = JSON.parse(responseText);
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            console.error(`Failed to parse JSON response for group ${groupId}: ${e.message}`, responseText);
+            continue;
+        }
 
-        if (proxyResponse.success && proxyResponse.data && proxyResponse.data.data) {
-            const posts = proxyResponse.data.data;
-            allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
+        // Handle both direct Facebook API response and proxy response
+        let posts = [];
+        if (responseData.data?.data) { // Proxy structure { success: true, data: { data: [...] } }
+            posts = responseData.data.data;
+        } else if (responseData.data) { // Direct Facebook API structure { data: [...] }
+            posts = responseData.data;
         } else {
-            const errorMessage = proxyResponse.message || `Proxy returned success=false or malformed data for group ${groupId}`;
-            console.error(errorMessage, JSON.stringify(proxyResponse));
+            const errorMessage = responseData.message || `API returned malformed data for group ${groupId}`;
+            console.error(errorMessage, JSON.stringify(responseData));
+            continue; // Skip to the next group
+        }
+
+        if (posts.length > 0) {
+            allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
     await logScan(supabaseAdmin, campaign.id, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
