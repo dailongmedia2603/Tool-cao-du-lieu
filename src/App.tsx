@@ -16,6 +16,7 @@ import DataSourceFacebook from "./pages/DataSourceFacebook";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
+import Guide from "./pages/Guide";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => {
               <Route path="/data-source/facebook" element={<DataSourceFacebook />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/guide" element={<Guide />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

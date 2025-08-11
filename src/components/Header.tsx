@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, ArrowUpToLine, LogOut } from "lucide-react";
+import { Bell, ArrowUpToLine, LogOut, BookOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,10 @@ const Header = ({ session }: HeaderProps) => {
         {/* Placeholder for breadcrumbs or title if needed later */}
       </div>
       <div className="flex items-center space-x-4">
+        <Button variant="outline" className="space-x-2" onClick={() => navigate('/guide')}>
+          <BookOpen className="h-5 w-5" />
+          <span>Hướng dẫn</span>
+        </Button>
         <Button variant="outline" className="space-x-2">
           <ArrowUpToLine className="h-5 w-5" />
           <span>Upgrade Plan</span>
