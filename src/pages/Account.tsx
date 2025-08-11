@@ -15,7 +15,7 @@ import ReportWidget from "@/components/ReportWidget";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle, ShieldCheck } from "lucide-react";
+import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle, ShieldCheck, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Role {
@@ -27,6 +27,36 @@ interface AdminUser extends User {
   banned_until?: string;
   roles: string[];
 }
+
+const rolePermissions: Record<string, { description: string; permissions: { feature: string; access: string }[] }> = {
+  'Super Admin': {
+    description: 'Quyền cao nhất, toàn quyền kiểm soát hệ thống.',
+    permissions: [
+      { feature: 'Quản lý Người dùng', access: 'Toàn quyền (Xem, Thêm, Xóa, Phân quyền)' },
+      { feature: 'Quản lý Chiến dịch', access: 'Toàn quyền (Xem, Sửa, Xóa tất cả)' },
+      { feature: 'Quản lý Nguồn', access: 'Toàn quyền' },
+      { feature: 'Quản lý Báo cáo', access: 'Toàn quyền' },
+    ]
+  },
+  'Admin': {
+    description: 'Quản lý nội dung chính nhưng không quản lý người dùng.',
+    permissions: [
+      { feature: 'Quản lý Người dùng', access: 'Không có quyền' },
+      { feature: 'Quản lý Chiến dịch', access: 'Toàn quyền (Xem, Sửa, Xóa tất cả)' },
+      { feature: 'Quản lý Nguồn', access: 'Toàn quyền' },
+      { feature: 'Quản lý Báo cáo', access: 'Toàn quyền' },
+    ]
+  },
+  'User': {
+    description: 'Quyền cơ bản, chỉ thao tác trên dữ liệu của chính mình.',
+    permissions: [
+      { feature: 'Quản lý Người dùng', access: 'Không có quyền' },
+      { feature: 'Quản lý Chiến dịch', access: 'Chỉ trên dữ liệu của mình' },
+      { feature: 'Quản lý Nguồn', access: 'Chỉ trên dữ liệu của mình' },
+      { feature: 'Quản lý Báo cáo', access: 'Chỉ trên dữ liệu của mình' },
+    ]
+  }
+};
 
 const Account = () => {
   const { roles } = useAuth();
@@ -41,6 +71,7 @@ const Account = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false);
+  const [viewingRoleDetails, setViewingRoleDetails] = useState<string | null>(null);
 
   // Form states
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -123,6 +154,7 @@ const Account = () => {
     setUserToEditRoles(user);
     const currentUserRoleIds = allRoles.filter(role => user.roles.includes(role.name)).map(role => role.id);
     setSelectedRoleIds(currentUserRoleIds);
+    setViewingRoleDetails(null); // Reset details view
     setIsRolesDialogOpen(true);
   };
 
@@ -220,21 +252,62 @@ const Account = () => {
       </AlertDialog>
 
       <Dialog open={isRolesDialogOpen} onOpenChange={setIsRolesDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+        <DialogContent className="sm:max-w-3xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
           <DialogHeader><DialogTitle>Phân quyền cho tài khoản</DialogTitle><DialogDescription>Chọn các quyền bạn muốn gán cho <span className="font-bold">{userToEditRoles?.email}</span>.</DialogDescription></DialogHeader>
-          <div className="py-4 space-y-3">
-            {allRoles.map(role => (
-              <div key={role.id} className="flex items-center space-x-3">
-                <Checkbox
-                  id={`role-${role.id}`}
-                  checked={selectedRoleIds.includes(role.id)}
-                  onCheckedChange={(checked) => {
-                    setSelectedRoleIds(prev => checked ? [...prev, role.id] : prev.filter(id => id !== role.id));
-                  }}
-                />
-                <Label htmlFor={`role-${role.id}`} className="font-medium text-base cursor-pointer">{role.name}</Label>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4">
+            {/* Left Column: Role Selection */}
+            <div className="space-y-3 pr-4 border-r border-orange-100">
+              {allRoles.map(role => (
+                <div key={role.id} className="flex items-center justify-between p-2 rounded-md hover:bg-orange-50">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`role-${role.id}`}
+                      checked={selectedRoleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedRoleIds(prev => checked ? [...prev, role.id] : prev.filter(id => id !== role.id));
+                      }}
+                    />
+                    <Label htmlFor={`role-${role.id}`} className="font-medium text-base cursor-pointer">{role.name}</Label>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-auto px-2 py-1 text-xs text-brand-orange" onClick={() => setViewingRoleDetails(role.name)}>
+                    <Info className="h-3 w-3 mr-1" />
+                    Chi tiết
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {/* Right Column: Permission Details */}
+            <div className="pl-4">
+              <h4 className="font-semibold text-gray-700 mb-2">Chi tiết quyền</h4>
+              {viewingRoleDetails && rolePermissions[viewingRoleDetails] ? (
+                <div className="space-y-4 p-4 bg-white/50 rounded-lg border border-orange-100">
+                  <div>
+                    <h5 className="font-bold text-gray-800">{viewingRoleDetails}</h5>
+                    <p className="text-sm text-gray-500">{rolePermissions[viewingRoleDetails].description}</p>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tính năng</TableHead>
+                        <TableHead>Quyền truy cập</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rolePermissions[viewingRoleDetails].permissions.map((perm, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium text-sm">{perm.feature}</TableCell>
+                          <TableCell className="text-sm">{perm.access}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full p-4 bg-gray-50 rounded-lg text-sm text-gray-500">
+                  <p>Bấm "Chi tiết" vào một vai trò để xem quyền hạn.</p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsRolesDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateRoles} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}</Button></DialogFooter>
         </DialogContent>
