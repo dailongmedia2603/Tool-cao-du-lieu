@@ -41,7 +41,7 @@ const BankInfoSettings = () => {
     if (qrFile) {
       const filePath = `public/qr-code-${Date.now()}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('public_assets')
+        .from('public-assets')
         .upload(filePath, qrFile);
       
       if (uploadError) {
@@ -51,7 +51,7 @@ const BankInfoSettings = () => {
         return;
       }
       
-      const { data: urlData } = supabase.storage.from('public_assets').getPublicUrl(uploadData.path);
+      const { data: urlData } = supabase.storage.from('public-assets').getPublicUrl(uploadData.path);
       uploadedUrl = urlData.publicUrl;
     }
 
