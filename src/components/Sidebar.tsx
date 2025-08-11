@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose } from "lucide-react";
+import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, Megaphone, PanelLeftClose, PanelRightClose, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -106,6 +106,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
             <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>
+            <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>
             <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>
           </nav>
         </div>
