@@ -5,6 +5,7 @@ import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Set
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NavLink = ({ to, icon: Icon, children, isCollapsed }: { to: string; icon: React.ElementType; children: React.ReactNode; isCollapsed: boolean }) => {
   const location = useLocation();
@@ -55,6 +56,8 @@ const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode })
 
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleSidebar: () => void }) => {
   const location = useLocation();
+  const { roles } = useAuth();
+  const isSuperAdmin = roles.includes('Super Admin');
   const isDataSourceActive = location.pathname.startsWith('/data-source');
 
   return (
@@ -106,7 +109,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
             <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>
-            <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>
+            {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
             <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>
           </nav>
         </div>

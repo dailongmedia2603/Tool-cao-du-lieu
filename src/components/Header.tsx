@@ -2,26 +2,23 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bell, ArrowUpToLine, LogOut, BookOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface HeaderProps {
-  session: Session;
-}
-
-const Header = ({ session }: HeaderProps) => {
+const Header = () => {
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const user = session.user;
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate('/login');
   };
 
   const getInitials = (email: string) => {
     return email ? email.charAt(0).toUpperCase() : 'P';
   }
+
+  if (!user) return null;
 
   return (
     <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">

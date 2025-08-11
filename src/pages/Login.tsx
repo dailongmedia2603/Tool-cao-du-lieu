@@ -3,13 +3,10 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Session } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface LoginProps {
-  session: Session | null;
-}
-
-const Login = ({ session }: LoginProps) => {
+const Login = () => {
+  const { session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -15,6 +15,7 @@ import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Define a more specific user type that includes admin properties
 interface AdminUser extends User {
@@ -22,6 +23,8 @@ interface AdminUser extends User {
 }
 
 const Account = () => {
+  const { roles } = useAuth();
+  const isSuperAdmin = roles.includes('Super Admin');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -163,36 +166,38 @@ const Account = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Thêm tài khoản</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-            <DialogHeader>
-              <DialogTitle>Thêm tài khoản mới</DialogTitle>
-              <DialogDescription>Tạo một tài khoản người dùng mới. Tài khoản sẽ được tự động xác thực.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="new-email">Email</Label>
-                <Input id="new-email" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="email@example.com" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="new-password">Mật khẩu</Label>
-                <Input id="new-password" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="••••••••" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
-              <Button onClick={handleAddUser} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
-                {isSubmitting ? "Đang thêm..." : "Thêm"}
+        {isSuperAdmin && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Thêm tài khoản</span>
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+              <DialogHeader>
+                <DialogTitle>Thêm tài khoản mới</DialogTitle>
+                <DialogDescription>Tạo một tài khoản người dùng mới. Tài khoản sẽ được tự động xác thực.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="new-email">Email</Label>
+                  <Input id="new-email" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="email@example.com" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="new-password">Mật khẩu</Label>
+                  <Input id="new-password" type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Hủy</Button>
+                <Button onClick={handleAddUser} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+                  {isSubmitting ? "Đang thêm..." : "Thêm"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border border-orange-200 rounded-lg bg-white">

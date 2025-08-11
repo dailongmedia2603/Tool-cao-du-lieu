@@ -1,6 +1,3 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,38 +14,24 @@ import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Guide from "./pages/Guide";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ session }: { session: Session | null }) => {
+const ProtectedRoute = () => {
+  const { session } = useAuth();
   if (!session) {
     return <Navigate to="/login" replace />;
   }
   return (
-    <Layout session={session}>
+    <Layout>
       <Outlet />
     </Layout>
   );
 };
 
-const App = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+const AppContent = () => {
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -59,36 +42,44 @@ const App = () => {
   }
 
   return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/keys" element={<ApiKeys />} />
+          <Route path="/data-source/website" element={<DataSourceWebsite />} />
+          <Route path="/data-source/facebook" element={<DataSourceFacebook />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/guide" element={<Guide />} />
+        </Route>
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner
-          position="bottom-right"
-          toastOptions={{
-            classNames: {
-              success: "bg-brand-orange-light text-brand-orange border-orange-200",
-              error: "bg-red-100 text-red-600 border-red-200",
-              loading: "bg-brand-orange-light text-brand-orange border-orange-200",
-            },
-          }}
-        />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login session={session} />} />
-            <Route element={<ProtectedRoute session={session} />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/keys" element={<ApiKeys />} />
-              <Route path="/data-source/website" element={<DataSourceWebsite />} />
-              <Route path="/data-source/facebook" element={<DataSourceFacebook />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/account" element={<Account />} />
-              <Route path="/guide" element={<Guide />} />
-            </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner
+            position="bottom-right"
+            toastOptions={{
+              classNames: {
+                success: "bg-brand-orange-light text-brand-orange border-orange-200",
+                error: "bg-red-100 text-red-600 border-red-200",
+                loading: "bg-brand-orange-light text-brand-orange border-orange-200",
+              },
+            }}
+          />
+          <AppContent />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
