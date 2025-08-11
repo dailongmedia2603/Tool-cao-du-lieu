@@ -32,7 +32,7 @@ const ApiKeys = () => {
 
   // Gemini states
   const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-1.5-pro-latest");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro-latest");
   const [isTestingGemini, setIsTestingGemini] = useState(false);
   const [geminiTestStatus, setGeminiTestStatus] = useState<
     "success" | "error" | null
@@ -70,7 +70,7 @@ const ApiKeys = () => {
         console.error("Error fetching settings:", error);
       } else if (data) {
         setGeminiApiKey(data.gemini_api_key || "");
-        setGeminiModel(data.gemini_model || "gemini-1.5-pro-latest");
+        setGeminiModel(data.gemini_model || "gemini-2.5-pro-latest");
         setFacebookApiUrl(
           data.facebook_api_url || "http://api.akng.io.vn/graph/"
         );
@@ -275,11 +275,14 @@ const ApiKeys = () => {
                     <SelectValue placeholder="Select a model" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-1.5-pro-latest">
-                      Gemini 1.5 Pro
+                    <SelectItem value="gemini-2.5-pro-latest">
+                      Gemini 2.5 Pro
                     </SelectItem>
-                    <SelectItem value="gemini-1.5-flash-latest">
-                      Gemini 1.5 Flash
+                    <SelectItem value="gemini-2.5-flash-latest">
+                      Gemini 2.5 Flash
+                    </SelectItem>
+                    <SelectItem value="gemini-2.5-flash-lite-latest">
+                      Gemini 2.5 Flash-Lite
                     </SelectItem>
                   </SelectContent>
                 </Select>
