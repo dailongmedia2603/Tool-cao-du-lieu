@@ -64,13 +64,19 @@ const Profile = () => {
     setIsSaving(true);
     const toastId = showLoading('Đang cập nhật...');
 
+    let formattedPhone = phone.trim();
+    // Automatically format to E.164 for Vietnamese numbers
+    if (formattedPhone && formattedPhone.startsWith('0')) {
+      formattedPhone = `+84${formattedPhone.substring(1)}`;
+    }
+
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ first_name: firstName, last_name: lastName, updated_at: new Date().toISOString() })
       .eq('id', user.id);
 
     const { error: authError } = await supabase.auth.updateUser({
-      phone: phone,
+      phone: formattedPhone,
     });
 
     dismissToast(toastId);
