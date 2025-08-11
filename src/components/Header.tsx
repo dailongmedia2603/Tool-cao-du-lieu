@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, ArrowUpToLine, LogOut, BookOpen, User } from "lucide-react";
+import { Bell, ArrowUpToLine, LogOut, BookOpen, User, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, roles } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = roles.includes('Super Admin');
 
   const handleSignOut = async () => {
     await signOut();
@@ -60,9 +61,12 @@ const Header = () => {
               <User className="mr-2 h-4 w-4" />
               <span>Thông tin tài khoản</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
-              Cài đặt
-            </DropdownMenuItem>
+            {isSuperAdmin && (
+              <DropdownMenuItem onClick={() => navigate('/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Cài đặt</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500 focus:bg-red-50">
               <LogOut className="mr-2 h-4 w-4" />
