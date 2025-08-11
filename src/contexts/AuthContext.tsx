@@ -26,46 +26,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfileAndRoles = async (userId: string) => {
-    const profilePromise = supabase.from('profiles').select('first_name, last_name').eq('id', userId).single();
-    const rolesPromise = supabase.rpc('get_user_roles');
-    
-    const [profileResult, rolesResult] = await Promise.all([profilePromise, rolesPromise]);
+    try {
+      const profilePromise = supabase.from('profiles').select('first_name, last_name').eq('id', userId).single();
+      const rolesPromise = supabase.rpc('get_user_roles');
+      
+      const [profileResult, rolesResult] = await Promise.all([profilePromise, rolesPromise]);
 
-    if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-      console.error("Error fetching profile:", profileResult.error);
+      if (profileResult.error && profileResult.error.code !== 'PGRST116') {
+        console.error("Error fetching profile:", profileResult.error);
+        setProfile(null);
+      } else {
+        setProfile(profileResult.data);
+      }
+
+      if (rolesResult.error) {
+        console.error("Error fetching user roles:", rolesResult.error);
+        setRoles([]);
+      } else {
+        const rolesData = rolesResult.data || [];
+        setRoles(rolesData.map((r: { role_name: string }) => r.role_name));
+      }
+    } catch (error) {
+      console.error("An unexpected error occurred in fetchProfileAndRoles:", error);
       setProfile(null);
-    } else {
-      setProfile(profileResult.data);
-    }
-
-    if (rolesResult.error) {
-      console.error("Error fetching user roles:", rolesResult.error);
       setRoles([]);
-    } else {
-      setRoles(rolesResult.data.map((r: { role_name: string }) => r.role_name));
     }
   };
 
   useEffect(() => {
     const setData = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error getting session:", error);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await fetchProfileAndRoles(session.user.id);
+        } else {
+          setProfile(null);
+          setRoles([]);
+        }
+      } catch (e) {
+        console.error("Error setting initial data in AuthProvider", e);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        await fetchProfileAndRoles(session.user.id);
-      } else {
-        setProfile(null);
-        setRoles([]);
-      }
-      setLoading(false);
     };
+
+    setData();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
@@ -76,11 +89,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setProfile(null);
         setRoles([]);
       }
-      // Ensure loading is false after auth state change
-      if (loading) setLoading(false);
+      if (loading) {
+        setLoading(false);
+      }
     });
-
-    setData();
 
     return () => {
       subscription.unsubscribe();
