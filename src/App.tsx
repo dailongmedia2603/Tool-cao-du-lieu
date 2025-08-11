@@ -28,8 +28,10 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Prevent non-super-admins from accessing /account
-  if (location.pathname.startsWith('/account') && !roles.includes('Super Admin')) {
+  const isSuperAdmin = roles.includes('Super Admin');
+
+  // Prevent non-super-admins from accessing protected routes
+  if ((location.pathname.startsWith('/account') || location.pathname.startsWith('/settings')) && !isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 

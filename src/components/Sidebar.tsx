@@ -144,7 +144,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
             <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>
             {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
-            <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>
+            {isSuperAdmin && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>
         </div>
         <div className="border-t border-gray-200 p-4">
