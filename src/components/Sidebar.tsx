@@ -56,8 +56,17 @@ const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode })
   );
 };
 
+// Define a map of allowed icons for type safety
+const iconMap: Record<string, React.ElementType> = {
+  LifeBuoy: Icons.LifeBuoy,
+  HelpCircle: Icons.HelpCircle,
+  MessageSquare: Icons.MessageSquare,
+  Phone: Icons.Phone,
+  BookOpen: Icons.BookOpen,
+};
+
 interface SupportWidgetData {
-  support_widget_icon: keyof typeof Icons;
+  support_widget_icon: string; // The DB stores a string
   support_widget_title: string;
   support_widget_description: string;
   support_widget_link: string;
@@ -83,7 +92,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
     fetchWidgetData();
   }, []);
 
-  const SupportIcon = supportWidgetData ? Icons[supportWidgetData.support_widget_icon] || LifeBuoy : LifeBuoy;
+  const SupportIcon = (supportWidgetData && iconMap[supportWidgetData.support_widget_icon]) || LifeBuoy;
 
   return (
     <TooltipProvider delayDuration={0}>
