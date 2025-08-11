@@ -38,8 +38,8 @@ const UpgradeRequestsTab = () => {
         created_at,
         status,
         profiles ( email, avatar_url ),
-        current_plan:pricing_plans!upgrade_requests_current_plan_id_fkey ( name ),
-        requested_plan:pricing_plans!upgrade_requests_requested_plan_id_fkey ( name )
+        current_plan:current_plan_id ( name ),
+        requested_plan:requested_plan_id ( name )
       `)
       .eq('status', 'pending')
       .order('created_at', { ascending: true });
