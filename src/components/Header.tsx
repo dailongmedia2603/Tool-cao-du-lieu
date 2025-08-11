@@ -6,9 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
-  const { user, profile, signOut, roles } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const isSuperAdmin = roles.includes('Super Admin');
 
   const handleSignOut = async () => {
     await signOut();
@@ -17,13 +16,6 @@ const Header = () => {
 
   const getInitials = (email: string) => {
     return email ? email.charAt(0).toUpperCase() : 'P';
-  }
-
-  const getDisplayName = () => {
-    if (profile?.first_name || profile?.last_name) {
-      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-    }
-    return 'Tài khoản';
   }
 
   if (!user) return null;
@@ -57,7 +49,7 @@ const Header = () => {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{getDisplayName()}</p>
+                <p className="text-sm font-medium leading-none">Tài khoản</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user.email}
                 </p>
@@ -68,11 +60,9 @@ const Header = () => {
               <User className="mr-2 h-4 w-4" />
               <span>Thông tin tài khoản</span>
             </DropdownMenuItem>
-            {isSuperAdmin && (
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
-                Cài đặt
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
+              Cài đặt
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500 focus:bg-red-50">
               <LogOut className="mr-2 h-4 w-4" />
